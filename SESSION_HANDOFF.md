@@ -126,3 +126,9 @@ These files are modified and uncommitted. The live site does not have them. Do n
 - Do not turn Vercel Deployment Protection back on for production.
 - Do not remove the PostgreSQL `0.0.0.0/0` rule unless Vercel can still reach Aurora.
 - Do not add a paid email service. Wait for his Resend API key.
+
+## Pitch decks (1 October 2026, local only)
+
+A Pitch Decks section was added to the member portal after this handoff was first written. It is in the working tree and is **not** on Vercel until it is committed, pushed, and redeployed. The tables are already in Aurora (`npm run db:setup` was run): `pitch_decks`, `pitch_deck_files`, `pitch_deck_views`.
+
+Onboarded members open it from the sidebar. They submit a title, company, stage (Idea, Pre-seed, Seed, Growth), short description, and a PDF up to 4 MB. Other onboarded members can browse, filter, and open the PDF. The file is not public; it is served only through the member session. A view is counted once per other member, not when the author opens their own deck. The author can edit or delete. There is no event gate and no locked state.

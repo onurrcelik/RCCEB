@@ -401,6 +401,39 @@ CREATE TABLE IF NOT EXISTS email_unsubscribes (
 );
 ALTER TABLE email_unsubscribes ENABLE ROW LEVEL SECURITY;
 
+-- ── Pitch decks ───────────────────────────────────────────────────────────────
+-- The PDF lives in its own table so listing decks never reads the file bytes.
+CREATE TABLE IF NOT EXISTS pitch_decks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (char_length(trim(title)) > 0 AND char_length(title) <= 140),
+  company_name TEXT NOT NULL CHECK (char_length(trim(company_name)) > 0 AND char_length(company_name) <= 120),
+  description TEXT NOT NULL CHECK (char_length(trim(description)) > 0 AND char_length(description) <= 1500),
+  stage TEXT NOT NULL CHECK (stage IN ('idea', 'pre-seed', 'seed', 'growth')),
+  file_name TEXT NOT NULL CHECK (char_length(file_name) > 0 AND char_length(file_name) <= 200),
+  file_size INTEGER NOT NULL CHECK (file_size > 0 AND file_size <= 4194304),
+  view_count INTEGER NOT NULL DEFAULT 0 CHECK (view_count >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS pitch_decks_created_idx ON pitch_decks (created_at DESC);
+CREATE INDEX IF NOT EXISTS pitch_decks_author_idx ON pitch_decks (author_id, created_at DESC);
+ALTER TABLE pitch_decks ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS pitch_deck_files (
+  deck_id UUID PRIMARY KEY REFERENCES pitch_decks(id) ON DELETE CASCADE,
+  bytes BYTEA NOT NULL
+);
+ALTER TABLE pitch_deck_files ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS pitch_deck_views (
+  deck_id UUID NOT NULL REFERENCES pitch_decks(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (deck_id, member_id)
+);
+ALTER TABLE pitch_deck_views ENABLE ROW LEVEL SECURITY;
+
 -- ── Rate limiting (shared across instances; see app/lib/request-security.ts) ──
 CREATE TABLE IF NOT EXISTS rate_limits (
   key TEXT PRIMARY KEY,

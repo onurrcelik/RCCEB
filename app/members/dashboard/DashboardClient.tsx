@@ -7,7 +7,7 @@ import { EventImageGrid } from '@/app/components/events/EventImageGrid';
 import { EventLightbox } from '@/app/components/events/EventLightbox';
 import { EventRecord, formatEventDate } from '@/app/lib/events';
 import {
-    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon, BuildingOffice2Icon, Bars3Icon
+    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon, BuildingOffice2Icon, Bars3Icon, PresentationChartBarIcon
 } from '@heroicons/react/24/outline';
 import { LinkedinIcon, GithubIcon, InstagramIcon, YoutubeIcon } from '@/app/components/ui/BrandIcons';
 import { categoryLabel, classYearLabel, MEMBER_CATEGORIES } from '@/app/lib/categories';
@@ -15,6 +15,7 @@ import { RccebLogo } from '@/app/components/ui/RccebLogo';
 import { MemberProfileEditor } from '@/app/components/profile/MemberProfileEditor';
 import { JobBoardSection } from './job-board/JobBoardSection';
 import { MarketplaceSection } from './marketplace/MarketplaceSection';
+import { PitchDecksSection } from './pitch-decks/PitchDecksSection';
 import { PerksSection } from './perks/PerksSection';
 
 type CompanyLink = {
@@ -122,6 +123,7 @@ const NAV_ITEMS = [
     { id: 'companies', label: 'Companies', icon: BuildingOffice2Icon },
     { id: 'job-board', label: 'Job Board', icon: BriefcaseIcon },
     { id: 'marketplace', label: 'Marketplace', icon: TagIcon },
+    { id: 'pitch-decks', label: 'Pitch Decks', icon: PresentationChartBarIcon },
     { id: 'perks', label: 'Perks', icon: GiftIcon },
     { id: 'match', label: '1-on-1 Match', icon: ArrowsRightLeftIcon },
     { id: 'links', label: 'Links', icon: LinkIcon },
@@ -897,6 +899,12 @@ function DashboardContent() {
                                 <p className="text-zinc-400 text-sm">Post what you can help with — members contact you directly.</p>
                             </>
                         )}
+                        {activeSection === 'pitch-decks' && (
+                            <>
+                                <h1 className="text-xl font-bold text-white mb-1">Pitch decks</h1>
+                                <p className="text-zinc-400 text-sm">Browse ideas shared across the RCCEB community.</p>
+                            </>
+                        )}
                         {activeSection === 'perks' && (
                             <>
                                 <h1 className="text-xl font-bold text-white mb-1">Perks</h1>
@@ -1024,6 +1032,9 @@ function DashboardContent() {
 
                     {/* === MARKETPLACE === */}
                     {activeSection === 'marketplace' && <MarketplaceSection />}
+
+                    {/* === PITCH DECKS === */}
+                    {activeSection === 'pitch-decks' && <PitchDecksSection />}
 
                     {/* === PERKS === */}
                     {activeSection === 'perks' && <PerksSection />}
