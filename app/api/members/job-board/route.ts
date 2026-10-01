@@ -53,7 +53,12 @@ export async function GET(request: NextRequest) {
                 `SELECT ${AUTHOR_SELECT} FROM members WHERE id = ANY($1)`, [authorIds],
             ),
             query<{ member_id: string; company_name: string | null }>(
-                'SELECT member_id, company_name FROM member_companies WHERE member_id = ANY($1)', [authorIds],
+                `SELECT ca.member_id, string_agg(c.name, ', ' ORDER BY c.name) AS company_name
+                 FROM company_affiliations ca
+                 JOIN companies c ON c.id = ca.company_id
+                 WHERE ca.member_id = ANY($1)
+                 GROUP BY ca.member_id`,
+                [authorIds],
             ),
             query<{ post_id: string; applicant_member_id: string }>(
                 'SELECT post_id, applicant_member_id FROM job_board_applications WHERE post_id = ANY($1)', [postIds],
@@ -167,7 +172,10 @@ export async function POST(request: NextRequest) {
     // best-effort and never blocks the response from succeeding.
     try {
         const { rows: companyRows } = await query<{ company_name: string | null }>(
-            'SELECT company_name FROM member_companies WHERE member_id = $1',
+            `SELECT string_agg(c.name, ', ' ORDER BY c.name) AS company_name
+             FROM company_affiliations ca
+             JOIN companies c ON c.id = ca.company_id
+             WHERE ca.member_id = $1`,
             [member.id],
         );
         const company = companyRows[0];

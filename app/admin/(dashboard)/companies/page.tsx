@@ -103,7 +103,7 @@ export default function CompaniesPage() {
             <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Companies</h1>
-                    <p className="mt-1 text-sm text-slate-400">Company names shown automatically on member Job Board posts.</p>
+                    <p className="mt-1 text-sm text-slate-400">Companies members add during onboarding. Separate more than one with a comma. These are the companies other members can reach through them.</p>
                 </div>
                 <button onClick={fetchMembers} className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-colors hover:bg-slate-50">
                     <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin text-brand-blue-500' : 'text-slate-500'}`} />

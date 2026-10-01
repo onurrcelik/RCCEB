@@ -1,8 +1,8 @@
-import { isValidGraduationYear, normalizeCategories } from '@/app/lib/categories';
+import { isValidGraduationYear, normalizeCategories, normalizeExpertise } from '@/app/lib/categories';
 
 const MAX_LENGTHS: Record<string, number> = {
     name: 120,
-    bio: 280,
+    bio: 1000,
     avatar_url: 600,
     member_types: 120,
     linkedin: 300,
@@ -14,6 +14,9 @@ const MAX_LENGTHS: Record<string, number> = {
     favorite_resource: 500,
     occupation_link: 300,
     phone: 40,
+    can_help_with: 1000,
+    working_on: 1000,
+    education: 500,
 };
 
 const PUBLIC_MEMBER_FIELDS = [
@@ -34,6 +37,10 @@ const PUBLIC_MEMBER_FIELDS = [
     'phone',
     'graduation_year',
     'categories',
+    'can_help_with',
+    'working_on',
+    'expertise',
+    'education',
     'is_past_member',
     'onboarding_complete',
     'created_at',
@@ -67,6 +74,10 @@ export type InternalMember = {
     phone: string | null;
     graduation_year: number | null;
     categories: string[];
+    can_help_with: string | null;
+    working_on: string | null;
+    expertise: string[];
+    education: string | null;
     is_past_member: boolean;
     onboarding_complete: boolean;
     created_at: string;
@@ -94,6 +105,14 @@ export function normalizeMemberUpdates(body: Record<string, unknown>, allowed: s
 
         if (key === 'categories') {
             updates.categories = normalizeCategories(value);
+            continue;
+        }
+
+        if (key === 'expertise') {
+            const expertise = normalizeExpertise(value);
+            const submitted = Array.isArray(value) ? value.length : typeof value === 'string' && value.trim() ? 1 : 0;
+            if (submitted > 0 && expertise.length === 0) return { error: 'Choose expertise from the list' };
+            updates.expertise = expertise;
             continue;
         }
 

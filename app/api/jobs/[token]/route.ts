@@ -30,7 +30,13 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 
     const [{ rows: authorRows }, { rows: companyRows }] = await Promise.all([
         query<{ name: string | null }>('SELECT name FROM members WHERE id = $1', [post.author_id]),
-        query<{ company_name: string }>('SELECT company_name FROM member_companies WHERE member_id = $1', [post.author_id]),
+        query<{ company_name: string }>(
+            `SELECT string_agg(c.name, ', ' ORDER BY c.name) AS company_name
+             FROM company_affiliations ca
+             JOIN companies c ON c.id = ca.company_id
+             WHERE ca.member_id = $1`,
+            [post.author_id],
+        ),
     ]);
     const author = authorRows[0];
     const company = companyRows[0];

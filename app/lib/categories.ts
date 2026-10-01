@@ -65,3 +65,40 @@ export function isMatchEligible(row: MatchPoolSource): boolean {
 
 // Sector chips on a member's profile (stored comma-separated in members.member_types).
 export const SECTOR_OPTIONS = ['Tech', 'Finance', 'Investing', 'Consumer', 'Industrial', 'Healthcare', 'Energy', 'Real Estate', 'Media', 'Operations'];
+
+// Expertise tags asked at onboarding. Stored on members.expertise. The labels are
+// the exact set shown to members, so a pasted or typed value only sticks if it
+// matches one of these.
+export const EXPERTISE_OPTIONS = [
+    'Artificial Intelligence',
+    'Board Governance',
+    'Business Development',
+    'Community Building',
+    'Cybersecurity',
+    'Data Analytics',
+    'Finance',
+    'Fintech',
+    'Fundraising',
+    'International Growth',
+    'Legal',
+    'Marketing',
+    'Operations',
+    'Product Management',
+    'Sales',
+] as const;
+
+export type ExpertiseOption = typeof EXPERTISE_OPTIONS[number];
+
+const EXPERTISE_BY_KEY = new Map(EXPERTISE_OPTIONS.map(option => [option.toLowerCase(), option]));
+
+export function normalizeExpertise(value: unknown): ExpertiseOption[] {
+    const raw = Array.isArray(value)
+        ? value
+        : typeof value === 'string' ? value.split(',') : [];
+    const seen = new Set<string>();
+    for (const item of raw) {
+        const match = EXPERTISE_BY_KEY.get(String(item).trim().toLowerCase());
+        if (match) seen.add(match);
+    }
+    return EXPERTISE_OPTIONS.filter(option => seen.has(option));
+}

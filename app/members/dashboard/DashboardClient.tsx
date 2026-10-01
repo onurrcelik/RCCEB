@@ -7,14 +7,23 @@ import { EventImageGrid } from '@/app/components/events/EventImageGrid';
 import { EventLightbox } from '@/app/components/events/EventLightbox';
 import { EventRecord, formatEventDate } from '@/app/lib/events';
 import {
-    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon
+    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon, BuildingOffice2Icon
 } from '@heroicons/react/24/outline';
 import { LinkedinIcon, GithubIcon, InstagramIcon, YoutubeIcon } from '@/app/components/ui/BrandIcons';
-import { categoryLabel, classYearLabel, FIRST_GRADUATION_YEAR, MEMBER_CATEGORIES, SECTOR_OPTIONS } from '@/app/lib/categories';
+import { categoryLabel, classYearLabel, MEMBER_CATEGORIES } from '@/app/lib/categories';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
+import { MemberProfileEditor } from '@/app/components/profile/MemberProfileEditor';
 import { JobBoardSection } from './job-board/JobBoardSection';
 import { MarketplaceSection } from './marketplace/MarketplaceSection';
 import { PerksSection } from './perks/PerksSection';
+
+type CompanyLink = {
+    id?: string;
+    name: string;
+    role?: string | null;
+    website?: string | null;
+    linkedin?: string | null;
+};
 
 type Member = {
     id: string;
@@ -31,8 +40,32 @@ type Member = {
     occupation_link?: string;
     graduation_year?: number | null;
     categories?: string[];
+    can_help_with?: string | null;
+    working_on?: string | null;
+    expertise?: string[] | null;
+    education?: string | null;
+    companies?: CompanyLink[] | null;
     is_past_member?: boolean;
     created_at: string;
+};
+
+type CompanyDirectoryMember = {
+    id: string;
+    name: string | null;
+    avatar_url: string | null;
+    linkedin: string | null;
+    graduation_year: number | null;
+    categories: string[] | null;
+    is_past_member: boolean | null;
+    role: string | null;
+};
+
+type CompanyDirectoryEntry = {
+    id: string;
+    name: string;
+    website: string | null;
+    linkedin: string | null;
+    members: CompanyDirectoryMember[];
 };
 
 type SelfMember = Member & {
@@ -86,6 +119,7 @@ function compressImage(file: File, maxPx: number, quality: number): Promise<File
 
 const NAV_ITEMS = [
     { id: 'directory', label: 'Directory', icon: UsersIcon },
+    { id: 'companies', label: 'Companies', icon: BuildingOffice2Icon },
     { id: 'job-board', label: 'Job Board', icon: BriefcaseIcon },
     { id: 'marketplace', label: 'Marketplace', icon: TagIcon },
     { id: 'perks', label: 'Perks', icon: GiftIcon },
@@ -95,8 +129,6 @@ const NAV_ITEMS = [
     { id: 'referrals', label: 'Refer a Friend', icon: UserPlusIcon },
 ];
 
-const BACKGROUND_OPTIONS = SECTOR_OPTIONS;
-
 const VALID_SECTIONS = new Set(NAV_ITEMS.map(item => item.id));
 const DEFAULT_SECTION = 'directory';
 
@@ -104,61 +136,8 @@ function getValidSection(section: string | null) {
     return section && VALID_SECTIONS.has(section) ? section : DEFAULT_SECTION;
 }
 
-function toggleBackgroundSelection(currentValue: string, option: string) {
-    const current = currentValue.split(',').map(item => item.trim()).filter(Boolean);
-
-    if (current.includes(option)) {
-        return current.filter(item => item !== option).join(', ');
-    }
-
-    if (current.length >= 3) {
-        return currentValue;
-    }
-
-    return [...current, option].join(', ');
-}
-
-function BackgroundChipSelector({
-    value,
-    onChange,
-}: {
-    value: string;
-    onChange: (value: string) => void;
-}) {
-    const selectedBackgrounds = value.split(',').map(item => item.trim()).filter(Boolean);
-
-    return (
-        <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Sectors</label>
-                <span className="text-[10px] text-zinc-500">Pick up to 3</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-                {BACKGROUND_OPTIONS.map(option => {
-                    const selected = selectedBackgrounds.includes(option);
-                    const maxed = selectedBackgrounds.length >= 3 && !selected;
-
-                    return (
-                        <button
-                            key={option}
-                            type="button"
-                            onClick={() => onChange(toggleBackgroundSelection(value, option))}
-                            disabled={maxed}
-                            className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition-all ${
-                                selected
-                                    ? 'border-gold-400 bg-gold-400 text-zinc-950'
-                                    : maxed
-                                    ? 'cursor-not-allowed border-zinc-800 text-zinc-600'
-                                    : 'border-zinc-600 bg-zinc-800 text-zinc-300 hover:border-zinc-500 hover:text-white'
-                            }`}
-                        >
-                            {option}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
+function externalHref(value: string) {
+    return value.startsWith('http') ? value : `https://${value}`;
 }
 
 function LinkTypeIcon({ type }: { type: string }) {
@@ -309,19 +288,22 @@ function MemberCard({ member, onClick }: { member: Member; onClick: () => void }
                 </div>
             </div>
             {member.bio && (
-                <p className="text-zinc-300 text-xs leading-relaxed mb-2">{member.bio}</p>
+                <p className="text-zinc-300 text-xs leading-relaxed mb-2 line-clamp-3">{member.bio}</p>
             )}
-            {member.member_types && (
+            {(member.companies?.length ?? 0) > 0 && (
+                <p className="text-zinc-400 text-xs mb-2 truncate">{member.companies!.map(company => company.role ? `${company.name}, ${company.role}` : company.name).join(' · ')}</p>
+            )}
+            {(member.expertise?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
-                    {member.member_types.split(',').map(t => t.trim()).filter(Boolean).map(type => (
-                        <span key={type} className="text-[10px] font-medium bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-                            {type}
+                    {member.expertise!.map(tag => (
+                        <span key={tag} className="text-[10px] font-medium bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                            {tag}
                         </span>
                     ))}
                 </div>
             )}
-            {member.instagram && (
-                <p className="text-zinc-500 text-xs mb-2">{member.instagram}</p>
+            {(member.education || member.instagram) && (
+                <p className="text-zinc-500 text-xs mb-2">{member.education || member.instagram}</p>
             )}
             {member.favorite_resource && (
                 <p className="text-zinc-500 text-[11px] italic leading-relaxed mb-2 line-clamp-2">
@@ -351,7 +333,8 @@ function MemberCard({ member, onClick }: { member: Member; onClick: () => void }
 }
 
 function MemberModal({ member, onClose, isSelf, onEdit }: { member: Member; onClose: () => void; isSelf?: boolean; onEdit?: () => void }) {
-    const types = member.member_types?.split(',').map(t => t.trim()).filter(Boolean) || [];
+    const tags = member.expertise?.length ? member.expertise : (member.member_types?.split(',').map(t => t.trim()).filter(Boolean) || []);
+    const education = member.education || member.instagram;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
@@ -376,9 +359,9 @@ function MemberModal({ member, onClose, isSelf, onEdit }: { member: Member; onCl
                                     {member.location}
                                 </div>
                             )}
-                            {types.length > 0 && (
+                            {tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {types.map(type => (
+                                    {tags.map(type => (
                                         <span key={type} className="text-[10px] font-semibold bg-gold-500/15 text-gold-300 px-2.5 py-0.5 rounded-full">
                                             {type}
                                         </span>
@@ -391,31 +374,51 @@ function MemberModal({ member, onClose, isSelf, onEdit }: { member: Member; onCl
                 <div className="p-6 space-y-5 overflow-y-auto">
                     {member.bio && (
                         <div>
-                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Current Role</div>
+                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Bio</div>
                             <p className="text-zinc-200 text-sm leading-relaxed">{member.bio}</p>
-                            {member.occupation_link && (
-                                <a
-                                    href={member.occupation_link.startsWith('http') ? member.occupation_link : `https://${member.occupation_link}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1 text-xs text-gold-400 hover:underline mt-1.5"
-                                >
-                                    <GlobeAltIcon className="w-3 h-3" />
-                                    {member.occupation_link.replace(/^https?:\/\//, '')}
-                                </a>
-                            )}
                         </div>
                     )}
-                    {member.twitter && (
+                    {member.can_help_with && (
                         <div>
-                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Area of Interest</div>
-                            <p className="text-zinc-200 text-sm">{member.twitter}</p>
+                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">What I can help with</div>
+                            <p className="text-zinc-200 text-sm leading-relaxed">{member.can_help_with}</p>
                         </div>
                     )}
-                    {member.instagram && (
+                    {member.working_on && (
                         <div>
-                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Education After RC</div>
-                            <p className="text-zinc-200 text-sm">{member.instagram}</p>
+                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">What I&apos;m working on</div>
+                            <p className="text-zinc-200 text-sm leading-relaxed">{member.working_on}</p>
+                        </div>
+                    )}
+                    {(member.companies?.length ?? 0) > 0 && (
+                        <div>
+                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Companies</div>
+                            <div className="space-y-2">
+                                {member.companies!.map(company => (
+                                    <div key={company.id || company.name}>
+                                        <div className="text-sm text-zinc-200">{company.role ? `${company.name} · ${company.role}` : company.name}</div>
+                                        <div className="mt-1 flex flex-wrap gap-2">
+                                            {company.website && (
+                                                <a href={externalHref(company.website)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-gold-400 hover:underline">
+                                                    <GlobeAltIcon className="w-3 h-3" />
+                                                    {company.website.replace(/^https?:\/\//, '')}
+                                                </a>
+                                            )}
+                                            {company.linkedin && (
+                                                <a href={externalHref(company.linkedin)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-gold-400 hover:underline">
+                                                    <LinkedinIcon className="w-3 h-3" /> LinkedIn
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {education && (
+                        <div>
+                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Education after RC</div>
+                            <p className="text-zinc-200 text-sm">{education}</p>
                         </div>
                     )}
                     {member.favorite_resource && (
@@ -546,6 +549,10 @@ function DashboardContent() {
     const [referralsSaved, setReferralsSaved] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [avatarError, setAvatarError] = useState('');
+    const [companyDirectory, setCompanyDirectory] = useState<CompanyDirectoryEntry[]>([]);
+    const [loadingCompanies, setLoadingCompanies] = useState(false);
+    const [companySearch, setCompanySearch] = useState('');
+    const [selectedCompany, setSelectedCompany] = useState<CompanyDirectoryEntry | null>(null);
 
     type MatchHistoryEntry = { round_id: string; week_of: string; partner: Member; confirmed_met: boolean | null };
     type PartnerHistoryEntry = { round_id: string; week_of: string; partner: Member; confirmed_met: boolean | null };
@@ -631,7 +638,7 @@ function DashboardContent() {
             .then(r => r.json())
             .then(d => {
                 if (d.member) {
-                    setSelf(d.member);
+                    setSelf({ ...d.member, companies: Array.isArray(d.companies) ? d.companies : [] });
                     if (d.member.website) {
                         try {
                             const saved = JSON.parse(d.member.website);
@@ -697,6 +704,15 @@ function DashboardContent() {
             fetchMatch();
         }
     }, [activeSection, fetchMembers, linkGroups.length]);
+
+    useEffect(() => {
+        if (activeSection !== 'companies') return;
+        setLoadingCompanies(true);
+        fetch(`/api/members/companies?t=${Date.now()}`, { cache: 'no-store' })
+            .then(r => r.json())
+            .then(d => { if (Array.isArray(d.companies)) setCompanyDirectory(d.companies); })
+            .finally(() => setLoadingCompanies(false));
+    }, [activeSection]);
 
     useEffect(() => {
         if (activeSection !== 'directory') return;
@@ -773,7 +789,11 @@ function DashboardContent() {
             m.bio?.toLowerCase().includes(search.toLowerCase()) ||
             m.location?.toLowerCase().includes(search.toLowerCase()) ||
             m.member_types?.toLowerCase().includes(search.toLowerCase()) ||
-            m.twitter?.toLowerCase().includes(search.toLowerCase()) ||
+            m.can_help_with?.toLowerCase().includes(search.toLowerCase()) ||
+            m.working_on?.toLowerCase().includes(search.toLowerCase()) ||
+            m.education?.toLowerCase().includes(search.toLowerCase()) ||
+            (m.expertise ?? []).some(tag => tag.toLowerCase().includes(search.toLowerCase())) ||
+            (m.companies ?? []).some(company => company.name.toLowerCase().includes(search.toLowerCase())) ||
             String(m.graduation_year ?? '').includes(search)
         )
     );
@@ -861,6 +881,12 @@ function DashboardContent() {
                                 <p className="text-zinc-400 text-sm">Founders, executives and investors of the RC community.</p>
                             </>
                         )}
+                        {activeSection === 'companies' && (
+                            <>
+                                <h1 className="text-xl font-bold text-white mb-1">Companies</h1>
+                                <p className="text-zinc-400 text-sm">Companies you can reach through an RCCEB member.</p>
+                            </>
+                        )}
                         {activeSection === 'job-board' && (
                             <>
                                 <h1 className="text-xl font-bold text-white mb-1">Job Board</h1>
@@ -919,7 +945,7 @@ function DashboardContent() {
                                 <input
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    placeholder="Search members by name, role, location, class year…"
+                                    placeholder="Search members by name, bio, company, expertise, class year…"
                                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm transition-colors"
                                 />
                                 {search && (
@@ -982,6 +1008,17 @@ function DashboardContent() {
                                 </>
                             )}
                         </div>
+                    )}
+
+                    {/* === COMPANIES === */}
+                    {activeSection === 'companies' && (
+                        <CompaniesSection
+                            companies={companyDirectory}
+                            loading={loadingCompanies}
+                            search={companySearch}
+                            onSearch={setCompanySearch}
+                            onOpen={setSelectedCompany}
+                        />
                     )}
 
                     {/* === JOB BOARD === */}
@@ -1241,7 +1278,7 @@ function DashboardContent() {
                                                     </button>
                                                     {matchData.myCurrentMatch.bio && (
                                                         <div>
-                                                            <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Occupation</div>
+                                                            <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Bio</div>
                                                             <p className="text-zinc-200 text-sm">{matchData.myCurrentMatch.bio}</p>
                                                         </div>
                                                     )}
@@ -1613,6 +1650,18 @@ function DashboardContent() {
             )}
 
             {/* Member detail modal */}
+            {selectedCompany && (
+                <CompanyModal
+                    company={selectedCompany}
+                    onClose={() => setSelectedCompany(null)}
+                    onOpenMember={memberId => {
+                        const found = members.find(member => member.id === memberId);
+                        setSelectedCompany(null);
+                        if (found) setSelectedMember(found);
+                    }}
+                />
+            )}
+
             {selectedMember && (
                 <MemberModal
                     member={selectedMember}
@@ -1760,187 +1809,164 @@ function EmailChangeCard({ member, onSave }: { member: SelfMember; onSave: (upda
     );
 }
 
+function CompaniesSection({
+    companies,
+    loading,
+    search,
+    onSearch,
+    onOpen,
+}: {
+    companies: CompanyDirectoryEntry[];
+    loading: boolean;
+    search: string;
+    onSearch: (value: string) => void;
+    onOpen: (company: CompanyDirectoryEntry) => void;
+}) {
+    const query = search.trim().toLowerCase();
+    const filtered = companies.filter(company =>
+        !query ||
+        company.name.toLowerCase().includes(query) ||
+        company.website?.toLowerCase().includes(query) ||
+        company.members.some(member => member.name?.toLowerCase().includes(query)),
+    );
+
+    return (
+        <div>
+            <div className="relative mb-6">
+                <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                    value={search}
+                    onChange={e => onSearch(e.target.value)}
+                    placeholder="Search companies or the members who can introduce you…"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm transition-colors"
+                />
+            </div>
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="bg-zinc-900/60 border border-zinc-700 rounded-2xl p-5 animate-pulse h-36" />
+                    ))}
+                </div>
+            ) : filtered.length === 0 ? (
+                <div className="text-center py-20 text-zinc-400">
+                    {query ? 'No companies match your search.' : 'No companies yet. Members add theirs when they join.'}
+                </div>
+            ) : (
+                <>
+                    <div className="text-xs text-zinc-400 mb-6">{filtered.length} compan{filtered.length === 1 ? 'y' : 'ies'}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filtered.map(company => (
+                            <button
+                                key={company.id}
+                                onClick={() => onOpen(company)}
+                                className="group text-left w-full bg-zinc-900/60 border border-zinc-700 rounded-2xl p-5 hover:border-gold-400/40 hover:bg-zinc-900 transition-all"
+                            >
+                                <div className="flex items-start gap-3 mb-3">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gold-400/10 text-gold-300">
+                                        <BuildingOffice2Icon className="h-6 w-6" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="font-semibold text-white text-sm group-hover:text-gold-300 transition-colors">{company.name}</div>
+                                        <div className="text-zinc-400 text-xs mt-0.5">
+                                            {company.members.length} member{company.members.length === 1 ? '' : 's'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-zinc-300 text-xs leading-relaxed line-clamp-2">
+                                    {company.members.map(member => member.role ? `${member.name}, ${member.role}` : member.name).filter(Boolean).join(' · ')}
+                                </p>
+                                {company.website && (
+                                    <p className="mt-2 text-[11px] text-zinc-500 truncate">{company.website.replace(/^https?:\/\//, '')}</p>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+function CompanyModal({
+    company,
+    onClose,
+    onOpenMember,
+}: {
+    company: CompanyDirectoryEntry;
+    onClose: () => void;
+    onOpenMember: (memberId: string) => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-2xl overflow-hidden animate-fade-in max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-6 pb-5 border-b border-zinc-700 shrink-0">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors">
+                        <XMarkIcon className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-lg font-bold text-white pr-8">{company.name}</h2>
+                    <p className="text-zinc-400 text-sm mt-1">Reach this company through these members.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {company.website && (
+                            <a href={externalHref(company.website)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-xl">
+                                <GlobeAltIcon className="w-3.5 h-3.5" />
+                                {company.website.replace(/^https?:\/\//, '')}
+                            </a>
+                        )}
+                        {company.linkedin && (
+                            <a href={externalHref(company.linkedin)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-xl">
+                                <LinkedinIcon className="w-3.5 h-3.5" /> Company LinkedIn
+                            </a>
+                        )}
+                    </div>
+                </div>
+                <div className="p-4 space-y-2 overflow-y-auto">
+                    {company.members.map(member => (
+                        <button
+                            key={member.id}
+                            onClick={() => onOpenMember(member.id)}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-zinc-800 transition-colors"
+                        >
+                            <Avatar url={member.avatar_url} name={member.name ?? undefined} className="w-10 h-10 shrink-0" textClass="text-xs" />
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="text-sm font-semibold text-white">{member.name}</span>
+                                    <ClassYearBadge year={member.graduation_year} />
+                                    {member.is_past_member && (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400/90 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded">Past</span>
+                                    )}
+                                </div>
+                                <div className="text-xs text-zinc-400 truncate">
+                                    {[member.role, ...(member.categories ?? []).map(id => categoryLabel(id))].filter(Boolean).join(' · ') || 'RCCEB member'}
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function ProfileSection({ member, onSave }: { member: SelfMember; onSave: (updated: Partial<SelfMember>) => void }) {
-    const [form, setForm] = useState({
-        name: member.name || '',
-        location: member.location || '',
-        phone: member.phone || '',
-        linkedin: member.linkedin || '',
-        github: member.github || '',
-        member_types: member.member_types || '',
-        bio: member.bio || '',
-        occupation_link: member.occupation_link || '',
-        twitter: member.twitter || '',
-        instagram: member.instagram || '',
-        favorite_resource: member.favorite_resource || '',
-        graduation_year: member.graduation_year ? String(member.graduation_year) : '',
-    });
-    const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
-
-    function update(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
-
-    async function handleSave() {
-        setSaving(true);
-        try {
-            const res = await fetch('/api/members/profile', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
-            });
-            const { member: updated } = await res.json();
-            onSave(updated);
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    const fields: { key: string; label: string; placeholder: string; textarea?: boolean }[] = [
-        { key: 'name', label: 'Full Name', placeholder: 'Your name' },
-        { key: 'graduation_year', label: 'RC Graduation Year', placeholder: `e.g. ${FIRST_GRADUATION_YEAR + 55}` },
-        { key: 'location', label: 'Location', placeholder: 'Istanbul, Turkey' },
-        { key: 'phone', label: 'Phone', placeholder: '+90 555 000 00 00' },
-        { key: 'linkedin', label: 'LinkedIn', placeholder: 'linkedin.com/in/...' },
-        { key: 'github', label: 'GitHub', placeholder: 'github.com/...' },
-        { key: 'bio', label: 'Current Role', placeholder: 'Founder & CEO at …, Partner at …', textarea: true },
-        { key: 'occupation_link', label: 'Company / Fund Website (optional)', placeholder: 'yourcompany.com' },
-        { key: 'twitter', label: 'Area of Interest', placeholder: 'Fintech, climate, B2B SaaS…' },
-        { key: 'instagram', label: 'Education After RC', placeholder: 'BSc Economics, Boğaziçi; MBA, INSEAD…' },
-        { key: 'favorite_resource', label: 'Favorite Read / Video / Person / Source', placeholder: 'Zero to One, Lex Fridman…', textarea: true },
-    ];
-
     return (
         <div className="bg-zinc-900/60 border border-zinc-700 rounded-2xl p-6">
             <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-5">Edit Profile</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                    <BackgroundChipSelector value={form.member_types} onChange={value => update('member_types', value)} />
-                </div>
-                {fields.map(field => (
-                    <div key={field.key} className={field.textarea ? 'sm:col-span-2' : ''}>
-                        <label className="block text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{field.label}</label>
-                        {field.textarea ? (
-                            <textarea
-                                value={(form as Record<string, string>)[field.key]}
-                                onChange={e => update(field.key, e.target.value)}
-                                placeholder={field.placeholder}
-                                rows={3}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm resize-none transition-colors"
-                            />
-                        ) : (
-                            <input
-                                value={(form as Record<string, string>)[field.key]}
-                                onChange={e => update(field.key, e.target.value)}
-                                placeholder={field.placeholder}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm transition-colors"
-                            />
-                        )}
-                    </div>
-                ))}
-            </div>
-            <button
-                onClick={handleSave}
-                disabled={saving}
-                className="mt-5 flex items-center gap-2 bg-gold-400 hover:bg-gold-400/90 disabled:opacity-50 text-zinc-950 font-semibold py-2.5 px-6 rounded-xl transition-all text-sm"
-            >
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : saved ? <><CheckCircleIcon className="w-4 h-4" /> Saved</> : 'Save changes'}
-            </button>
+            <MemberProfileEditor member={member} onSave={updated => onSave(updated as Partial<SelfMember>)} />
         </div>
     );
 }
 
 function ProfileModal({ member, onClose, onSave }: { member: SelfMember; onClose: () => void; onSave: (updated: Partial<SelfMember>) => void }) {
-    const [form, setForm] = useState({
-        name: member.name || '',
-        location: member.location || '',
-        phone: member.phone || '',
-        linkedin: member.linkedin || '',
-        github: member.github || '',
-        member_types: member.member_types || '',
-        bio: member.bio || '',
-        occupation_link: member.occupation_link || '',
-        twitter: member.twitter || '',
-        instagram: member.instagram || '',
-        favorite_resource: member.favorite_resource || '',
-        graduation_year: member.graduation_year ? String(member.graduation_year) : '',
-    });
-    const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
-
-    function update(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
-
-    async function handleSave() {
-        setSaving(true);
-        try {
-            const res = await fetch('/api/members/profile', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
-            });
-            const { member: updated } = await res.json();
-            onSave(updated);
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    const fields: { key: string; label: string; placeholder: string; textarea?: boolean }[] = [
-        { key: 'name', label: 'Full Name', placeholder: 'Your name' },
-        { key: 'graduation_year', label: 'RC Graduation Year', placeholder: `e.g. ${FIRST_GRADUATION_YEAR + 55}` },
-        { key: 'location', label: 'Location', placeholder: 'Istanbul, Turkey' },
-        { key: 'phone', label: 'Phone', placeholder: '+90 555 000 00 00' },
-        { key: 'linkedin', label: 'LinkedIn', placeholder: 'linkedin.com/in/...' },
-        { key: 'github', label: 'GitHub', placeholder: 'github.com/...' },
-        { key: 'bio', label: 'Current Role', placeholder: 'Founder & CEO at …, Partner at …', textarea: true },
-        { key: 'occupation_link', label: 'Company / Fund Website (optional)', placeholder: 'yourcompany.com' },
-        { key: 'twitter', label: 'Area of Interest', placeholder: 'Fintech, climate, B2B SaaS…' },
-        { key: 'instagram', label: 'Education After RC', placeholder: 'BSc Economics, Boğaziçi; MBA, INSEAD…' },
-        { key: 'favorite_resource', label: 'Favorite Read / Video / Person / Source', placeholder: 'Zero to One, Lex Fridman…', textarea: true },
-    ];
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-base font-bold text-white">Edit Profile</h2>
                     <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors"><XMarkIcon className="w-5 h-5" /></button>
                 </div>
-                <div className="space-y-3">
-                    <BackgroundChipSelector value={form.member_types} onChange={value => update('member_types', value)} />
-                    {fields.map(field => (
-                        <div key={field.key}>
-                            <label className="block text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{field.label}</label>
-                            {field.textarea ? (
-                                <textarea
-                                    value={(form as Record<string, string>)[field.key]}
-                                    onChange={e => update(field.key, e.target.value)}
-                                    placeholder={field.placeholder}
-                                    rows={3}
-                                    className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-3.5 py-2.5 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm resize-none"
-                                />
-                            ) : (
-                                <input
-                                    value={(form as Record<string, string>)[field.key]}
-                                    onChange={e => update(field.key, e.target.value)}
-                                    placeholder={field.placeholder}
-                                    className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-3.5 py-2.5 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm"
-                                />
-                            )}
-                        </div>
-                    ))}
-                </div>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="mt-5 w-full flex items-center justify-center gap-2 bg-gold-400 hover:bg-gold-400/90 disabled:opacity-50 text-zinc-950 font-semibold py-3 rounded-xl transition-all text-sm"
-                >
-                    {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : saved ? <><CheckCircleIcon className="w-4 h-4" /> Saved</> : 'Save changes'}
-                </button>
+                <MemberProfileEditor member={member} onSave={updated => onSave(updated as Partial<SelfMember>)} />
                 <div className="mt-4 pt-4 border-t border-zinc-700">
                     <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Account</div>
                     <div className="text-sm text-zinc-300">{member.email}</div>

@@ -39,10 +39,17 @@ CREATE INDEX IF NOT EXISTS applications_created_idx ON applications (created_at 
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 
 -- ── Members ───────────────────────────────────────────────────────────────────
--- Some profile columns are stored under historical names; the portal labels them:
---   bio       → "Current Role"          twitter   → "Area of Interest"
---   instagram → "Education After RC"     member_types → sector chips (comma-separated)
---   website   → Refer-a-Friend suggestions (JSON)
+-- Join (rcceb.org/join) already supplies name, phone, LinkedIn, class year and
+-- pathway (`categories`). Onboarding asks for the rest:
+--   bio            → Bio
+--   can_help_with  → What I can help with
+--   working_on     → What I'm working on
+--   expertise      → expertise tags
+--   education      → Education after RC
+--   favorite_resource → Favorite read / video / person / source
+--   website        → Refer-a-Friend suggestions (JSON)
+-- Older columns kept so existing rows still load: instagram, twitter,
+-- member_types, occupation_link.
 CREATE TABLE IF NOT EXISTS members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
@@ -102,6 +109,50 @@ CREATE TABLE IF NOT EXISTS member_companies (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE member_companies ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE members ADD COLUMN IF NOT EXISTS can_help_with TEXT;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS working_on TEXT;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS expertise TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE members ADD COLUMN IF NOT EXISTS education TEXT;
+
+-- One row per company. Members who type the same name share the row, so the
+-- Companies directory can show every member who can open a door there.
+CREATE TABLE IF NOT EXISTS companies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL CHECK (char_length(trim(name)) > 0 AND char_length(name) <= 120),
+  name_key TEXT NOT NULL UNIQUE,
+  website TEXT,
+  linkedin TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS company_affiliations (
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (company_id, member_id)
+);
+CREATE INDEX IF NOT EXISTS company_affiliations_member_idx ON company_affiliations (member_id);
+ALTER TABLE company_affiliations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_affiliations ADD COLUMN IF NOT EXISTS role TEXT;
+
+-- Carry older one-company rows into the directory. Safe to re-run.
+INSERT INTO companies (name, name_key)
+SELECT DISTINCT btrim(company_name), lower(regexp_replace(btrim(company_name), '\s+', ' ', 'g'))
+FROM member_companies
+WHERE btrim(company_name) <> ''
+ON CONFLICT (name_key) DO NOTHING;
+
+INSERT INTO company_affiliations (company_id, member_id)
+SELECT c.id, mc.member_id
+FROM member_companies mc
+JOIN companies c ON c.name_key = lower(regexp_replace(btrim(mc.company_name), '\s+', ' ', 'g'))
+ON CONFLICT DO NOTHING;
+
+UPDATE members SET education = instagram
+WHERE education IS NULL AND instagram IS NOT NULL AND btrim(instagram) <> '';
 
 -- ── Sign-in (see app/lib/auth.ts) ─────────────────────────────────────────────
 -- One row per sign-in request: hashes of the emailed link token and 6-digit code.

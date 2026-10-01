@@ -47,7 +47,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
                 'SELECT id, name, avatar_url, email, phone, linkedin, bio FROM members WHERE id = ANY($1)', [memberIds],
             ),
             query<{ member_id: string; company_name: string }>(
-                'SELECT member_id, company_name FROM member_companies WHERE member_id = ANY($1)', [memberIds],
+                `SELECT ca.member_id, string_agg(c.name, ', ' ORDER BY c.name) AS company_name
+                 FROM company_affiliations ca
+                 JOIN companies c ON c.id = ca.company_id
+                 WHERE ca.member_id = ANY($1)
+                 GROUP BY ca.member_id`, [memberIds],
             ),
         ]);
         for (const applicant of applicants) membersById.set(applicant.id, applicant);

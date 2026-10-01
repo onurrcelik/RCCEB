@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { ArrowRightIcon, ArrowLeftIcon, UserIcon, MapPinIcon, BriefcaseIcon, AcademicCapIcon, CheckCircleIcon, EnvelopeIcon, UserPlusIcon, CameraIcon, BookOpenIcon, GlobeAltIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ArrowLeftIcon, UserIcon, AcademicCapIcon, CheckCircleIcon, EnvelopeIcon, UserPlusIcon, CameraIcon, BookOpenIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { LinkedinIcon } from '@/app/components/ui/BrandIcons';
 import Link from 'next/link';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
-import { FIRST_GRADUATION_YEAR, SECTOR_OPTIONS } from '@/app/lib/categories';
-
-const BACKGROUND_OPTIONS = SECTOR_OPTIONS;
+import { categoryLabel, FIRST_GRADUATION_YEAR } from '@/app/lib/categories';
+import { EMPTY_COMPANY, type CompanyDraft } from '@/app/lib/company-input';
+import { ExpertisePicker } from '@/app/components/profile/ExpertisePicker';
+import { CompanyFields } from '@/app/components/profile/CompanyFields';
 
 // Newest first, matching the dropdown on rcceb.org/join.
 const GRADUATION_YEARS = Array.from(
@@ -44,7 +45,9 @@ function OnboardingContent() {
     const [saving, setSaving] = useState(false);
     const [savingReferrals, setSavingReferrals] = useState(false);
     const [error, setError] = useState('');
-    const [selectedBackground, setSelectedBackground] = useState<string[]>([]);
+    const [expertise, setExpertise] = useState<string[]>([]);
+    const [pathways, setPathways] = useState<string[]>([]);
+    const [companies, setCompanies] = useState<CompanyDraft[]>([{ ...EMPTY_COMPANY }]);
     const [memberEmail, setMemberEmail] = useState('');
     const totalSteps = 2;
     const [avatarUrl, setAvatarUrl] = useState('');
@@ -54,8 +57,8 @@ function OnboardingContent() {
     const [uploadError, setUploadError] = useState('');
 
     const [form, setForm] = useState({
-        name: '', location: '', phone: '', linkedin: '', graduation_year: '',
-        current_occupation: '', occupation_link: '', area_of_interest: '', education: '',
+        name: '', phone: '', linkedin: '', graduation_year: '',
+        bio: '', can_help_with: '', working_on: '', education: '',
         favorite_resource: '',
     });
 
@@ -72,26 +75,29 @@ function OnboardingContent() {
                 if (!m) return;
                 if (m.email) setMemberEmail(m.email);
 
-                // Prefill from what they already have — the invite copies name, phone,
-                // LinkedIn and class year over from their application, and step 1 PATCHes
-                // every profile field it submits, so a blank form would null them out.
-                // The column is the storage, not the question: `bio` holds the current
-                // occupation, `twitter` the area of interest, `instagram` the education.
+                // Name, phone, LinkedIn, class year and pathway were copied from the
+                // rcceb.org/join application when the invite was sent.
                 setForm(f => ({
                     ...f,
                     name: m.name ?? f.name,
-                    location: m.location ?? f.location,
                     phone: m.phone ?? f.phone,
                     linkedin: m.linkedin ?? f.linkedin,
                     graduation_year: m.graduation_year ? String(m.graduation_year) : f.graduation_year,
-                    current_occupation: m.bio ?? f.current_occupation,
-                    occupation_link: m.occupation_link ?? f.occupation_link,
-                    area_of_interest: m.twitter ?? f.area_of_interest,
-                    education: m.instagram ?? f.education,
+                    bio: m.bio ?? f.bio,
+                    can_help_with: m.can_help_with ?? f.can_help_with,
+                    working_on: m.working_on ?? f.working_on,
+                    education: m.education ?? m.instagram ?? f.education,
                     favorite_resource: m.favorite_resource ?? f.favorite_resource,
                 }));
-                if (m.member_types) {
-                    setSelectedBackground(String(m.member_types).split(',').map((t: string) => t.trim()).filter(Boolean));
+                if (Array.isArray(m.categories)) setPathways(m.categories);
+                if (Array.isArray(m.expertise)) setExpertise(m.expertise);
+                if (Array.isArray(d.companies) && d.companies.length > 0) {
+                    setCompanies(d.companies.map((company: { name?: string; role?: string | null; website?: string | null; linkedin?: string | null }) => ({
+                        name: company.name || '',
+                        role: company.role || '',
+                        website: company.website || '',
+                        linkedin: company.linkedin || '',
+                    })));
                 }
                 if (m.avatar_url) setAvatarUrl(m.avatar_url);
             });
@@ -103,14 +109,6 @@ function OnboardingContent() {
 
     function updateReferral(index: number, key: 'name' | 'email' | 'linkedin' | 'notes', val: string) {
         setReferrals(prev => prev.map((r, i) => i === index ? { ...r, [key]: val } : r));
-    }
-
-    function toggleBackground(t: string) {
-        setSelectedBackground(prev => {
-            if (prev.includes(t)) return prev.filter(x => x !== t);
-            if (prev.length >= 3) return prev;
-            return [...prev, t];
-        });
     }
 
     async function handleAvatarUpload(file: File) {
@@ -137,14 +135,16 @@ function OnboardingContent() {
         const missing: string[] = [];
         if (!avatarUrl) missing.push(uploadError ? `Photo (${uploadError})` : 'Photo');
         if (!form.name) missing.push('Full Name');
-        if (!form.location) missing.push('Location');
         if (!form.phone) missing.push('Phone');
         if (!form.linkedin) missing.push('LinkedIn');
         if (!form.graduation_year) missing.push('RC Graduation Year');
-        if (selectedBackground.length < 1) missing.push('Sectors (pick up to 3)');
-        if (!form.current_occupation) missing.push('Current Role');
-        if (!form.area_of_interest) missing.push('Area of Interest');
-        if (!form.education) missing.push('Educational Background');
+        if (!form.bio) missing.push('Bio');
+        if (!form.can_help_with) missing.push('What I can help with');
+        if (!form.working_on) missing.push("What I'm working on");
+        if (expertise.length < 1) missing.push('Expertise');
+        if (!companies.some(company => company.name.trim())) missing.push('Companies you are affiliated with');
+        else if (companies.some(company => company.name.trim() && !company.role.trim())) missing.push('Your role at each company');
+        if (!form.education) missing.push('Education after RC');
         if (!form.favorite_resource) missing.push('Favorite Read / Video / Person / Source');
         if (missing.length > 0) {
             setError(`Please complete: ${missing.join(', ')}`);
@@ -158,16 +158,16 @@ function OnboardingContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: form.name,
-                    bio: form.current_occupation,
-                    location: form.location,
+                    bio: form.bio,
                     linkedin: form.linkedin,
                     phone: form.phone,
                     graduation_year: form.graduation_year,
-                    member_types: selectedBackground.join(', '),
-                    twitter: form.area_of_interest,
-                    instagram: form.education,
+                    can_help_with: form.can_help_with,
+                    working_on: form.working_on,
+                    expertise,
+                    education: form.education,
                     favorite_resource: form.favorite_resource,
-                    occupation_link: form.occupation_link,
+                    companies,
                 }),
             });
             const data = await res.json();
@@ -245,14 +245,13 @@ function OnboardingContent() {
                 </div>
             </div>
 
-            <div className="max-w-xl mx-auto px-6 py-12 pb-40 md:pb-12">
+            <div className="max-w-2xl mx-auto px-6 py-12 pb-40 md:pb-12">
 
                 {/* ── Step 1: Profile ── */}
                 {step === 1 && (
                     <div className="animate-fade-in">
                         <div className="mb-8">
-                            <h1 className="text-2xl font-bold text-zinc-950 mb-2">Complete your profile</h1>
-                            <p className="text-zinc-500 text-sm">This is what other members will see.</p>
+                            <h1 className="text-2xl font-bold text-white">Complete your profile</h1>
                         </div>
 
                         <div className="space-y-4">
@@ -300,19 +299,6 @@ function OnboardingContent() {
                                         value={form.name}
                                         onChange={e => update('name', e.target.value)}
                                         placeholder="Alex Johnson"
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Location *</label>
-                                <div className="relative">
-                                    <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                    <input
-                                        value={form.location}
-                                        onChange={e => update('location', e.target.value)}
-                                        placeholder="Istanbul, Turkey"
                                         className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                     />
                                 </div>
@@ -373,72 +359,65 @@ function OnboardingContent() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Sectors * <span className="text-zinc-600 normal-case font-normal">pick up to 3</span></label>
-                                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                                    {BACKGROUND_OPTIONS.map(opt => {
-                                        const selected = selectedBackground.includes(opt);
-                                        const maxed = selectedBackground.length >= 3 && !selected;
-                                        return (
-                                            <button
-                                                key={opt}
-                                                type="button"
-                                                onClick={() => toggleBackground(opt)}
-                                                disabled={maxed}
-                                                className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                                                    selected
-                                                        ? 'bg-gold-400 border-gold-400 text-zinc-950'
-                                                        : maxed
-                                                        ? 'bg-transparent border-zinc-800 text-zinc-600 cursor-not-allowed'
-                                                        : 'bg-transparent border-zinc-700 text-zinc-400 hover:border-zinc-600'
-                                                }`}
-                                            >
-                                                {opt}
-                                            </button>
-                                        );
-                                    })}
+                            {pathways.length > 0 && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Pathway</label>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {pathways.map(id => (
+                                            <span key={id} className="text-[11px] font-semibold rounded-full border border-gold-400/40 bg-gold-500/15 px-2.5 py-1 text-gold-200">
+                                                {categoryLabel(id, 'label')}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             <div>
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Current Role *</label>
-                                <div className="relative">
-                                    <BriefcaseIcon className="absolute left-3.5 top-3.5 w-4 h-4 text-zinc-600" />
-                                    <textarea
-                                        value={form.current_occupation}
-                                        onChange={e => update('current_occupation', e.target.value)}
-                                        placeholder="Founder & CEO at …, Partner at … Ventures, COO at …"
-                                        rows={3}
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm resize-none transition-colors"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Company / Fund Website <span className="text-zinc-600 normal-case font-normal">optional</span></label>
-                                <div className="relative">
-                                    <GlobeAltIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                    <input
-                                        value={form.occupation_link}
-                                        onChange={e => update('occupation_link', e.target.value)}
-                                        placeholder="yourcompany.com"
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Area of Interest *</label>
-                                <input
-                                    value={form.area_of_interest}
-                                    onChange={e => update('area_of_interest', e.target.value)}
-                                    placeholder="Fintech, climate, B2B SaaS, early-stage investing…"
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Bio *</label>
+                                <textarea
+                                    value={form.bio}
+                                    onChange={e => update('bio', e.target.value)}
+                                    placeholder="A few lines on who you are and what you have built."
+                                    rows={4}
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm resize-none transition-colors"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Education After RC *</label>
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">What I can help with *</label>
+                                <textarea
+                                    value={form.can_help_with}
+                                    onChange={e => update('can_help_with', e.target.value)}
+                                    placeholder="Introductions, fundraising advice, hiring, go-to-market…"
+                                    rows={3}
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm resize-none transition-colors"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">What I&apos;m working on *</label>
+                                <textarea
+                                    value={form.working_on}
+                                    onChange={e => update('working_on', e.target.value)}
+                                    placeholder="The company, fund, or project that has your attention now."
+                                    rows={3}
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm resize-none transition-colors"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Expertise *</label>
+                                <ExpertisePicker selected={expertise} onChange={setExpertise} />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Companies I&apos;m affiliated with *</label>
+                                <p className="text-zinc-500 text-xs mb-3">Each company becomes a page other members can open, so they can see who in RCCEB can introduce them.</p>
+                                <CompanyFields companies={companies} onChange={setCompanies} />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Education after RC *</label>
                                 <div className="relative">
                                     <AcademicCapIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                                     <input
@@ -459,7 +438,7 @@ function OnboardingContent() {
                                         onChange={e => update('favorite_resource', e.target.value)}
                                         placeholder="Zero to One, Paul Graham Essays, Acquired Podcast…"
                                         rows={2}
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-zinc-950 placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors resize-none"
+                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors resize-none"
                                     />
                                 </div>
                             </div>
@@ -488,7 +467,7 @@ function OnboardingContent() {
                             <div className="w-12 h-12 rounded-full bg-gold-400/15 flex items-center justify-center mb-5">
                                 <UserPlusIcon className="w-5 h-5 text-gold-400" />
                             </div>
-                            <h1 className="text-2xl font-bold text-zinc-950 mb-2">Who else belongs in the Bond?</h1>
+                            <h1 className="text-2xl font-bold text-white mb-2">Who else belongs in the Bond?</h1>
                             <p className="text-zinc-500 text-sm leading-relaxed">
                                 Suggest 2 Robert College alumni you think would be a great addition to RCCEB. We&apos;ll reach out to them.
                             </p>

@@ -10,9 +10,11 @@ or Community Brain.
 ## What's in it
 
 **Member portal** (`/members`): Directory (filter by pathway, search by class year),
-Job Board, Marketplace, Perks, weekly 1-on-1 Match, Links, Events, Refer a Friend and
-Profile. Members sign in with a magic link or a one-time code. Membership is free, so
-onboarding is two steps: profile, then referrals.
+Companies (which companies members can open a door to), Job Board, Marketplace, Perks,
+weekly 1-on-1 Match, Links, Events, Refer a Friend and Profile. Members sign in with a
+magic link or a one-time code. Membership is free, so onboarding is two steps: profile,
+then referrals. Name, phone, LinkedIn, class year and pathway are copied from the
+application on rcceb.org/join.
 
 **Admin dashboard** (`/admin`): Applications, Members, Attendance, Matches, Events,
 Links, Perks and Settings, plus Companies and Analytics under "Other".
