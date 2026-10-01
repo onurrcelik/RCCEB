@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeMarketplaceListingInput, type MarketplaceListing } from '@/app/lib/marketplace';
 import { checkRateLimit, retryAfterSeconds } from '@/app/lib/request-security';
-import { getMemberFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';

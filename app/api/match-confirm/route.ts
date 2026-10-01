@@ -6,7 +6,7 @@ import { verifyMatchConfirm, type MetAnswer } from '@/app/lib/match-confirm';
 export const dynamic = 'force-dynamic';
 
 // Landing page for the "did you meet?" buttons in the weekly 1-on-1 emails. It sits
-// outside /members and /api/members on purpose: proxy.ts gates those behind a Supabase
+// outside /members and /api/members on purpose: proxy.ts gates those behind a
 // session, and requiring a login is the exact friction that kept people from answering.
 // The signed token in the link is what stands in for auth.
 

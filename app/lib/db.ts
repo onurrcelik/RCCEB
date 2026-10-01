@@ -1,6 +1,6 @@
 import { Pool, types } from 'pg';
 
-// Supabase's PostgREST always sent `date` columns as plain "YYYY-MM-DD" text;
+// The code expects `date` columns as plain "YYYY-MM-DD" text;
 // pg's default type parser instead returns a JS Date (in server-local time,
 // not UTC), silently breaking any code doing string ops (.slice, >=/<=
 // comparison) on what used to be a string. Keep pg's text format instead —
@@ -15,6 +15,11 @@ const g = globalThis as unknown as { pgPool?: Pool };
 
 function getPool(): Pool {
     if (!g.pgPool) {
+        // Without this, pg falls back to localhost and fails with the opaque
+        // "SASL: client password must be a string".
+        if (!process.env.DATABASE_URL) {
+            throw new Error('DATABASE_URL is not set — copy .env.example to .env.local and fill it in, then restart `npm run dev`.');
+        }
         g.pgPool = new Pool({
             connectionString: process.env.DATABASE_URL,
             ssl: { rejectUnauthorized: false },

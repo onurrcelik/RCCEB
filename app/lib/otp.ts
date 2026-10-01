@@ -1,6 +1,3 @@
-// Supabase issues the emailed sign-in code at the length configured on the
-// project — 8 digits here, not the 6 you might assume. Both login pages used to
-// truncate typed input to 6 characters, so the code could never verify. Accept a
-// range instead, so changing that project setting can't silently break sign-in.
+// Sign-in codes are 6 digits (see app/lib/auth.ts).
 export const OTP_MIN_LENGTH = 6;
-export const OTP_MAX_LENGTH = 10;
+export const OTP_MAX_LENGTH = 6;

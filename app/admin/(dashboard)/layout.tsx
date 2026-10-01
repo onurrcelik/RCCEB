@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
-import { ADMIN_COOKIE_NAME } from '@/app/lib/admin-session';
 import { UsersIcon, ChartBarIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, CheckBadgeIcon, CalendarDaysIcon, ArrowsRightLeftIcon, ClipboardDocumentListIcon, PencilSquareIcon, CheckIcon, XMarkIcon, PlusIcon, LinkIcon, ChevronRightIcon, GiftIcon, BuildingOffice2Icon } from '@heroicons/react/24/outline';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
 
@@ -77,12 +75,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const restoreItem = (href: string) => persist(hidden.filter(h => h !== href));
 
     const handleLogout = async () => {
-        const supabase = createBrowserClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            { cookieOptions: { name: ADMIN_COOKIE_NAME } },
-        );
-        await supabase.auth.signOut();
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind: 'admin' }),
+        }).catch(() => {});
         window.location.href = '/admin/login';
     };
 

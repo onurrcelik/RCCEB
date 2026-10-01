@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeJobBoardPostInput } from '@/app/lib/job-board';
-import { getMemberFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';

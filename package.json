@@ -6,12 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:setup": "node scripts/db-setup.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1144.0",
     "@heroicons/react": "^2.2.0",
-    "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.86.0",
     "clsx": "^2.1.1",
     "next": "^16.2.6",
     "pg": "^8.23.0",
@@ -29,5 +29,8 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMemberFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 import { BUCKETS, uploadObject, publicUrl } from '@/app/lib/storage';
 import { detectImageKind, imageContentType, imageExtension } from '@/app/lib/upload-security';

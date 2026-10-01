@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMemberFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 import { PERKS } from '@/app/members/dashboard/perks/perks-data';
 import { sendPerkInterestNotification } from '@/app/api/members/perks/send-notification';

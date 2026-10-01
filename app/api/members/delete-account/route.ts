@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMemberFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // (b) getMemberFromRequest returns null, so every members endpoint answers 401.
 //
 // What this deliberately does NOT do: delete the row, wipe profile fields, or
-// remove the Supabase auth user. Community records stay intact,
+// sign them out of other devices. Community records stay intact,
 // and an admin can undo this by flipping is_past_member back. Nothing here
 // claims the data was erased — the page that calls it says the same.
 export async function POST(request: NextRequest) {

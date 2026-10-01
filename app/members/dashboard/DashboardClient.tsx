@@ -1588,6 +1588,20 @@ function DashboardContent() {
                                     </p>
                                 </div>
                             </div>
+
+                            <button
+                                onClick={async () => {
+                                    await fetch('/api/auth/logout', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ kind: 'member' }),
+                                    }).catch(() => {});
+                                    window.location.href = '/members/login';
+                                }}
+                                className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
+                            >
+                                Sign out
+                            </button>
                         </div>
                     )}
                 </div>

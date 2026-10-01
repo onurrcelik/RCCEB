@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'applicationId or memberId is required' }, { status: 400 });
     }
 
-    // Our own token, not a Supabase action link — the member trades it for a fresh
-    // auth link when they actually click, however many days later that is.
+    // A long-lived invite token, traded for a session when they actually click,
+    // however many days later that is.
     let inviteLink: string;
     try {
         inviteLink = buildInviteUrl(getBaseUrl(request), await issueInviteToken(memberId));

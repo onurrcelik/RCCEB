@@ -1,7 +1,8 @@
--- RCCEB member & admin portal — full database schema.
+-- RCCEB member & admin portal — full database schema (plain PostgreSQL 15+).
 --
--- Run once, top to bottom, in the Supabase SQL editor of a fresh project. Every
--- statement is idempotent (IF NOT EXISTS / OR REPLACE), so re-running is safe.
+-- Run with `npm run db:setup` against the Aurora database in DATABASE_URL. Every
+-- statement is idempotent (IF NOT EXISTS / OR REPLACE), so re-running is safe and is
+-- how new tables get added to an existing database.
 --
 -- Security model: every table enables row level security with NO anon/authenticated
 -- policies. The app reaches the database only from server code — through DATABASE_URL
@@ -101,6 +102,34 @@ CREATE TABLE IF NOT EXISTS member_companies (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE member_companies ENABLE ROW LEVEL SECURITY;
+
+-- ── Sign-in (see app/lib/auth.ts) ─────────────────────────────────────────────
+-- One row per sign-in request: hashes of the emailed link token and 6-digit code.
+CREATE TABLE IF NOT EXISTS auth_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('member', 'admin')),
+  link_token_hash TEXT NOT NULL UNIQUE,
+  code_hash TEXT NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS auth_codes_email_idx ON auth_codes (email, kind, created_at DESC);
+ALTER TABLE auth_codes ENABLE ROW LEVEL SECURITY;
+
+-- Signed-in browsers: the cookie holds a random token, this table its hash.
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token_hash TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('member', 'admin')),
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS auth_sessions_email_idx ON auth_sessions (email);
+ALTER TABLE auth_sessions ENABLE ROW LEVEL SECURITY;
 
 -- ── Admin dashboard config (settings, shared notes, nav prefs, chat analysis) ──
 CREATE TABLE IF NOT EXISTS admin_config (
@@ -352,9 +381,4 @@ BEGIN
     RETURN NEXT;
 END;
 $$;
-REVOKE ALL ON FUNCTION rate_limit_hit(TEXT, BIGINT) FROM PUBLIC, anon, authenticated;
-
--- ── Storage buckets (public read; writes only via the service role) ───────────
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('avatars', 'avatars', true), ('events', 'events', true)
-ON CONFLICT (id) DO NOTHING;
+REVOKE ALL ON FUNCTION rate_limit_hit(TEXT, BIGINT) FROM PUBLIC;

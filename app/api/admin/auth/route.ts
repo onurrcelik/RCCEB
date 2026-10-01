@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateMemberLinkDetails, sendResendEmail } from '@/app/lib/member-auth';
+import { sendSignInEmail } from '@/app/lib/member-auth';
+import { createSignInCode } from '@/app/lib/auth';
 import { checkRateLimit, getClientIp, isValidEmail, retryAfterSeconds } from '@/app/lib/request-security';
 import { getBaseUrl } from '@/app/lib/site-url';
 import { isAdminEmail } from '@/app/lib/admin-auth';
@@ -31,29 +32,14 @@ export async function POST(request: NextRequest) {
         }
 
         const baseUrl = getBaseUrl(request);
-        const { link: magicLink, otp } = await generateMemberLinkDetails(normalizedEmail, `${baseUrl}/auth/admin/callback`, ['magiclink', 'invite', 'signup']);
+        const { linkToken, code, expiresInMinutes } = await createSignInCode(normalizedEmail, 'admin');
+        const link = `${baseUrl}/auth/admin/callback?token=${encodeURIComponent(linkToken)}`;
 
         if (process.env.NODE_ENV !== 'production') {
-            return NextResponse.json({ ok: true, devLink: magicLink });
+            return NextResponse.json({ ok: true, devLink: link });
         }
 
-        const otpText = otp ? `\n\nOr enter this code on the sign-in page: ${otp}` : '';
-        const text = `Sign in to the RCCEB admin dashboard using the link below. This link expires in 15 minutes.
-
-${magicLink}${otpText}
-
-If you didn't request this, you can safely ignore this email.`;
-        const html = `<p>Sign in to the RCCEB admin dashboard.</p>
-<p><a href="${magicLink}">Click this link to log in</a></p>
-${otp ? `<p>Or enter this code on the sign-in page: <strong style="font-size:18px;letter-spacing:2px;">${otp}</strong></p>` : ''}
-<p>If you didn't request this, you can safely ignore this email.</p>`;
-
-        await sendResendEmail({
-            to: normalizedEmail,
-            subject: 'Your RCCEB admin login link',
-            text,
-            html,
-        });
+        await sendSignInEmail({ to: normalizedEmail, link, code, minutes: expiresInMinutes, audience: 'admin' });
 
         return NextResponse.json({ ok: true });
     } catch (err) {
@@ -62,7 +48,7 @@ ${otp ? `<p>Or enter this code on the sign-in page: <strong style="font-size:18p
     }
 }
 
-// DELETE /api/admin/auth — logout handled client-side via Supabase auth
+// DELETE /api/admin/auth — kept for compatibility; sign-out is POST /api/auth/logout
 export async function DELETE() {
     return NextResponse.json({ ok: true });
 }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
 import { isAdminEmail } from '@/app/lib/admin-auth';
-import { ADMIN_COOKIE_NAME } from '@/app/lib/admin-session';
+import { sessionEmailFromRequest } from '@/app/lib/auth';
 import { query } from '@/app/lib/db';
 
 function denyAdmin(request: NextRequest, pathname: string) {
@@ -23,9 +22,6 @@ type MemberGateRow = {
     is_past_member: boolean;
 };
 
-// Rolling 30 days: every visit that refreshes the token pushes the expiry back out.
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
-
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
@@ -36,65 +32,34 @@ export async function proxy(request: NextRequest) {
     if (pathname === '/admin/login') return NextResponse.next();
     if (pathname === '/api/admin/auth' && request.method === 'POST') return NextResponse.next();
 
-    // Admin routes — validate the Supabase session against the admin email list.
+    // Admin routes — validate the admin session against the admin email list.
     if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !anonKey) return denyAdmin(request, pathname);
-
-        let adminResponse = NextResponse.next({ request });
-
-        const supabase = createServerClient(supabaseUrl, anonKey, {
-            cookieOptions: { name: ADMIN_COOKIE_NAME },
-            cookies: {
-                getAll: () => request.cookies.getAll(),
-                setAll: (cookiesToSet) => {
-                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-                    adminResponse = NextResponse.next({ request });
-                    cookiesToSet.forEach(({ name, value, options }) => {
-                        adminResponse.cookies.set(name, value, { ...options, maxAge: SESSION_MAX_AGE });
-                    });
-                }
-            },
-        });
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!isAdminEmail(user?.email)) return denyAdmin(request, pathname);
-
-        return adminResponse;
+        let email: string | null = null;
+        try {
+            email = await sessionEmailFromRequest(request, 'admin');
+        } catch (e) {
+            console.error('proxy.ts admin session lookup failed:', e);
+        }
+        if (!isAdminEmail(email)) return denyAdmin(request, pathname);
+        return NextResponse.next();
     }
 
     // Member auth bypass routes — exact matches only.
     if (pathname === '/members/login') return NextResponse.next();
-    if (pathname === '/members/verify') return NextResponse.next();
     // Redeeming an onboarding invite is how a member gets their first session.
     if (pathname === '/members/invite') return NextResponse.next();
-    if (pathname === '/auth/callback') return NextResponse.next();
     if (pathname === '/api/members/auth') return NextResponse.next();
 
-    // Member routes — validate the Supabase session.
+    // Member routes — validate the member session.
     if (pathname.startsWith('/members') || pathname.startsWith('/api/members')) {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !anonKey) return denyMember(request, pathname);
-
-        let supabaseResponse = NextResponse.next({ request });
-
-        const supabase = createServerClient(supabaseUrl, anonKey, {
-            cookies: {
-                getAll: () => request.cookies.getAll(),
-                setAll: (cookiesToSet) => {
-                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-                    supabaseResponse = NextResponse.next({ request });
-                    cookiesToSet.forEach(({ name, value, options }) => {
-                        supabaseResponse.cookies.set(name, value, { ...options, maxAge: SESSION_MAX_AGE });
-                    });
-                }
-            },
-        });
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.email) return denyMember(request, pathname);
+        let email: string | null = null;
+        try {
+            email = await sessionEmailFromRequest(request, 'member');
+        } catch (e) {
+            console.error('proxy.ts member session lookup failed:', e);
+            return denyMember(request, pathname);
+        }
+        if (!email) return denyMember(request, pathname);
 
         // Paths a signed-in member can reach before finishing onboarding. delete-account
         // is here so someone can always leave, onboarded or not.
@@ -111,7 +76,7 @@ export async function proxy(request: NextRequest) {
         try {
             const { rows } = await query<MemberGateRow>(
                 'SELECT onboarding_complete, is_past_member FROM members WHERE email ILIKE $1',
-                [user.email.toLowerCase()],
+                [email],
             );
             member = rows[0];
         } catch (e) {
@@ -129,7 +94,7 @@ export async function proxy(request: NextRequest) {
             return denyMember(request, pathname);
         }
 
-        return supabaseResponse;
+        return NextResponse.next();
     }
 
     return NextResponse.next();

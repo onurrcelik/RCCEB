@@ -16,8 +16,8 @@ import { getBaseUrl } from '@/app/lib/site-url';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function secret(): string {
-    const value = process.env.UNSUBSCRIBE_SECRET || process.env.SUPABASE_SECRET_KEY;
-    if (!value) throw new Error('UNSUBSCRIBE_SECRET or SUPABASE_SECRET_KEY must be configured');
+    const value = process.env.APP_SECRET;
+    if (!value) throw new Error('APP_SECRET must be configured');
     return value;
 }
 

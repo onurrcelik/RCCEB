@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import { ADMIN_COOKIE_NAME } from '@/app/lib/admin-session';
 import { OTP_MIN_LENGTH, OTP_MAX_LENGTH } from '@/app/lib/otp';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
 
@@ -43,18 +41,14 @@ export default function AdminLogin() {
         setVerifying(true);
         setError('');
         try {
-            const supabase = createBrowserClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                { cookieOptions: { name: ADMIN_COOKIE_NAME } },
-            );
-            const { error: otpError } = await supabase.auth.verifyOtp({
-                email: email.trim().toLowerCase(),
-                token,
-                type: 'email',
+            const res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kind: 'admin', email: email.trim().toLowerCase(), code: token }),
             });
-            if (otpError) throw new Error('Invalid or expired code. Please try again.');
-            window.location.href = '/admin';
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Invalid or expired code. Please try again.');
+            window.location.href = data.redirectTo;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
             setVerifying(false);

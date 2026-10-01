@@ -3,7 +3,6 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRightIcon, EnvelopeIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { createBrowserClient } from '@supabase/ssr';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
 import { BRAND } from '@/app/lib/brand';
 import { OTP_MIN_LENGTH, OTP_MAX_LENGTH } from '@/app/lib/otp';
@@ -33,22 +32,14 @@ function MemberLoginContent() {
         setVerifying(true);
         setError('');
         try {
-            const supabase = createBrowserClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                { cookieOptions: { maxAge: 30 * 24 * 60 * 60 } },
-            );
-            const { error: otpError } = await supabase.auth.verifyOtp({
-                email: email.trim().toLowerCase(),
-                token,
-                type: 'email',
+            const res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kind: 'member', email: email.trim().toLowerCase(), code: token }),
             });
-            if (otpError) throw new Error('Invalid or expired code. Please try again.');
-
-            const res = await fetch('/api/members/profile', { cache: 'no-store' });
-            if (!res.ok) throw new Error('You are not registered as a member.');
-            const { member } = await res.json();
-            window.location.href = member?.onboarding_complete ? '/members/dashboard' : '/members/onboarding';
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Invalid or expired code. Please try again.');
+            window.location.href = data.redirectTo;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
             setVerifying(false);

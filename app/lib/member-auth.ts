@@ -1,43 +1,31 @@
-import { getSupabase } from '@/app/lib/supabase';
 import { buildUnsubscribeUrl, isUnsubscribed } from '@/app/lib/unsubscribe';
-import { randomBytes } from 'crypto';
 import { BRAND, emailFrom, replyToAddress } from '@/app/lib/brand';
+import { escapeHtml } from '@/app/lib/html-escape';
 
-type LinkKind = 'magiclink' | 'invite' | 'signup';
-
-export async function generateMemberLink(email: string, redirectTo: string, attempts: LinkKind[]) {
-    return (await generateMemberLinkDetails(email, redirectTo, attempts)).link;
-}
-
-// Like generateMemberLink, but also returns the 6-digit email OTP so login can
-// complete when the emailed link opens in a different browser than the one the
-// member started in. Verified client-side via auth.verifyOtp.
-export async function generateMemberLinkDetails(email: string, redirectTo: string, attempts: LinkKind[]) {
-    const supabase = getSupabase();
-    let lastError: string | undefined;
-
-    for (const type of attempts) {
-        const { data, error } = type === 'signup'
-            ? await supabase.auth.admin.generateLink({
-                type: 'signup',
-                email,
-                password: randomBytes(24).toString('hex'),
-                options: { redirectTo },
-            })
-            : await supabase.auth.admin.generateLink({
-                type,
-                email,
-                options: { redirectTo },
-            });
-
-        if (data?.properties?.action_link) {
-            return { link: data.properties.action_link, otp: data.properties.email_otp || null };
-        }
-
-        lastError = error?.message || `Failed to generate ${type} link`;
-    }
-
-    throw new Error(lastError || 'Failed to generate auth link');
+// The sign-in email: a one-tap link plus the same sign-in as a 6-digit code, for when
+// the link opens in a different browser than the one the person started in.
+export async function sendSignInEmail({ to, name, link, code, minutes, audience }: {
+    to: string;
+    name?: string | null;
+    link: string;
+    code: string;
+    minutes: number;
+    audience: 'member' | 'admin';
+}) {
+    const first = (name || '').split(' ')[0];
+    const greeting = first ? `Welcome back, ${first}` : 'Hello';
+    const place = audience === 'admin' ? 'the RCCEB admin dashboard' : 'the RCCEB member portal';
+    await sendResendEmail({
+        to,
+        subject: audience === 'admin' ? 'Your RCCEB admin sign-in link' : 'Your RCCEB sign-in link',
+        text: `${greeting},\n\nSign in to ${place}:\n${link}\n\nOr enter this code on the sign-in page: ${code}\n\nThe link and code expire in ${minutes} minutes. If you didn't request this, you can ignore this email.`,
+        html: `<div style="max-width:520px;font-family:Inter,Arial,sans-serif;color:${BRAND.colors.navy};">
+<p style="font-size:15px;line-height:1.7;">${escapeHtml(greeting)},</p>
+<p style="margin:24px 0;"><a href="${link}" style="display:inline-block;background:${BRAND.colors.brandNavy};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:12px;">Sign in to ${place.replace('the ', '')}</a></p>
+<p style="font-size:14px;">Or enter this code on the sign-in page: <strong style="font-size:18px;letter-spacing:3px;">${code}</strong></p>
+<p style="color:#888;font-size:12px;">The link and code expire in ${minutes} minutes. If you didn't request this, you can ignore this email.</p>
+</div>`,
+    });
 }
 
 // 'transactional' — something the recipient asked for right now (login link, invite).

@@ -3,7 +3,7 @@ import { normalizeApplicationInput } from '@/app/lib/job-board';
 import { notifyPosterNewApplication } from '@/app/lib/job-board-notify';
 import { checkRateLimit, retryAfterSeconds } from '@/app/lib/request-security';
 import { getBaseUrl } from '@/app/lib/site-url';
-import { getMemberFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';

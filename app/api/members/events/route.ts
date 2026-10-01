@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireActiveMember } from '@/app/lib/supabase';
+import { requireActiveMember } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';

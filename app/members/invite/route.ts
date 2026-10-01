@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/app/lib/supabase';
-import { generateMemberLink } from '@/app/lib/member-auth';
+import { query } from '@/app/lib/db';
+import { createSession, setSessionCookie } from '@/app/lib/auth';
 import { hashInviteToken } from '@/app/lib/member-invites';
 import { checkRateLimit, getClientIp } from '@/app/lib/request-security';
 import { getBaseUrl } from '@/app/lib/site-url';
@@ -17,7 +17,8 @@ function bounce(baseUrl: string, notice: string) {
 
 // GET /members/invite?token=… — redeem an onboarding invite.
 // Deliberately reusable until onboarding completes: mail scanners prefetch links,
-// and a single-use token would leave the member holding a dead one.
+// and a single-use token would leave the member holding a dead one. A scanner's
+// prefetch only ever gets a session cookie in the scanner's own cookie jar.
 export async function GET(request: NextRequest) {
     const baseUrl = getBaseUrl(request);
     const token = request.nextUrl.searchParams.get('token');
@@ -31,52 +32,38 @@ export async function GET(request: NextRequest) {
     });
     if (!throttle.allowed) return bounce(baseUrl, 'invite_throttled');
 
-    const supabase = getSupabase();
-    const { data: invite } = await supabase
-        .from('member_invites')
-        .select('id, member_id, expires_at, revoked_at, used_at, redeem_count')
-        .eq('token_hash', hashInviteToken(token))
-        .maybeSingle();
+    const { rows: inviteRows } = await query<{ id: string; member_id: string; expires_at: string; revoked_at: string | null; used_at: string | null }>(
+        'SELECT id, member_id, expires_at, revoked_at, used_at FROM member_invites WHERE token_hash = $1',
+        [hashInviteToken(token)],
+    );
+    const invite = inviteRows[0];
 
     if (!invite || invite.revoked_at || new Date(invite.expires_at) <= new Date()) {
         return bounce(baseUrl, 'invite_expired');
     }
 
-    const { data: member } = await supabase
-        .from('members')
-        .select('email, onboarding_complete, is_past_member')
-        .eq('id', invite.member_id)
-        .single();
+    const { rows: memberRows } = await query<{ email: string; onboarding_complete: boolean; is_past_member: boolean }>(
+        'SELECT email, onboarding_complete, is_past_member FROM members WHERE id = $1',
+        [invite.member_id],
+    );
+    const member = memberRows[0];
 
     if (!member?.email || member.is_past_member) return bounce(baseUrl, 'invite_invalid');
     // Onboarding done means the invite has served its purpose; normal sign-in takes over.
     if (member.onboarding_complete) return bounce(baseUrl, 'invite_used');
 
-    let actionLink: string;
-    try {
-        actionLink = await generateMemberLink(
-            member.email,
-            `${baseUrl}/auth/callback`,
-            ['invite', 'magiclink', 'signup'],
-        );
-    } catch (err) {
-        console.error('[members/invite] Failed to mint auth link:', err);
-        return bounce(baseUrl, 'invite_error');
-    }
+    await query(
+        `UPDATE member_invites
+         SET used_at = COALESCE(used_at, now()), last_redeemed_at = now(), redeem_count = redeem_count + 1
+         WHERE id = $1`,
+        [invite.id],
+    );
 
-    const now = new Date().toISOString();
-    await supabase
-        .from('member_invites')
-        .update({
-            used_at: invite.used_at ?? now,
-            last_redeemed_at: now,
-            redeem_count: invite.redeem_count + 1,
-        })
-        .eq('id', invite.id);
-
-    // The Supabase link is single-use and short-lived, but it only has to survive
-    // this one redirect. no-store keeps any proxy from replaying a spent one.
-    return NextResponse.redirect(actionLink, {
+    // The invite itself is the proof of identity (it went to their inbox), so open a
+    // session directly and send them to onboarding.
+    const response = NextResponse.redirect(`${baseUrl}/members/onboarding`, {
         headers: { 'Cache-Control': 'no-store' },
     });
+    setSessionCookie(response, 'member', await createSession(member.email, 'member'));
+    return response;
 }

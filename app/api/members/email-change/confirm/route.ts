@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { replyToAddress } from '@/app/lib/brand';
 import { createHash, timingSafeEqual } from 'crypto';
-import { getSupabase, getMemberFromRequest, getAuthUserFromRequest } from '@/app/lib/supabase';
+import { getMemberFromRequest } from '@/app/lib/member-session';
+import { moveSessionsToEmail } from '@/app/lib/auth';
 import { query } from '@/app/lib/db';
 import { sendResendEmail } from '@/app/lib/member-auth';
 import { checkRateLimit, retryAfterSeconds } from '@/app/lib/request-security';
@@ -20,8 +21,8 @@ function hashesMatch(a: string, b: string): boolean {
 }
 
 // POST /api/members/email-change/confirm — redeem the code mailed to the new
-// address, then swap it into both Supabase Auth (source of truth for login)
-// and the members row (what getMemberFromRequest matches against).
+// address, then swap it into the members row and move their sessions with it so
+// they stay signed in.
 export async function POST(request: NextRequest) {
     const member = await getMemberFromRequest(request);
     if (!member) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,7 +37,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(retryAfterSeconds(limit.resetAt)) } });
     }
 
-    const supabase = getSupabase();
     const { rows: pendingRows } = await query<{
         pending_email: string | null;
         pending_email_code_hash: string | null;
@@ -65,32 +65,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid or expired code.' }, { status: 400 });
     }
 
-    const authUser = await getAuthUserFromRequest(request);
-    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const newEmail = row.pending_email;
     const oldEmail = member.email;
-
-    const { error: authError } = await supabase.auth.admin.updateUserById(authUser.id, { email: newEmail, email_confirm: true });
-    if (authError) {
-        // Someone else claimed that address between the code being sent and
-        // redeemed — the pending change can't complete, so clear it and make
-        // them start over with a different address.
-        await query('UPDATE members SET pending_email = null, pending_email_code_hash = null, pending_email_expires_at = null, pending_email_attempts = 0 WHERE id = $1', [member.id]);
-        return NextResponse.json({ error: 'That email could not be used. Please try a different one.' }, { status: 400 });
-    }
 
     try {
         await query(
             'UPDATE members SET email = $2, pending_email = null, pending_email_code_hash = null, pending_email_expires_at = null, pending_email_attempts = 0, updated_at = now() WHERE id = $1',
             [member.id, newEmail],
         );
-    } catch {
-        // Best-effort rollback so auth.users and members don't end up pointing
-        // at different emails — that would lock the member out of both.
-        await supabase.auth.admin.updateUserById(authUser.id, { email: oldEmail, email_confirm: true });
+    } catch (error) {
+        // Unique violation: someone else claimed that address between the code being
+        // sent and redeemed. Clear the pending change so they start over.
+        if ((error as { code?: string } | undefined)?.code === '23505') {
+            await query('UPDATE members SET pending_email = null, pending_email_code_hash = null, pending_email_expires_at = null, pending_email_attempts = 0 WHERE id = $1', [member.id]);
+            return NextResponse.json({ error: 'That email could not be used. Please try a different one.' }, { status: 400 });
+        }
         return NextResponse.json({ error: 'Could not complete the change. Please try again.' }, { status: 500 });
     }
+    await moveSessionsToEmail(oldEmail, newEmail);
 
     // Best-effort: let the old inbox know, in case this wasn't the member.
     sendResendEmail({

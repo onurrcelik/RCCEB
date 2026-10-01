@@ -37,7 +37,7 @@ export function getClientIp(request: NextRequest): string {
 }
 
 // Backed by the `rate_limits` table + `rate_limit_hit` RPC (see
-// supabase/migrations/rate-limits-table.sql) instead of an in-memory Map, so
+// db/schema.sql) instead of an in-memory Map, so
 // counters survive restarts and are shared across all instances (IDF-02).
 // The increment and window-rollover happen atomically inside the RPC's
 // single UPSERT statement, so concurrent requests for the same key can't

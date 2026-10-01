@@ -18,15 +18,16 @@ COPY --chown=node:node . .
 
 # Build-time public env vars. Secrets are injected at runtime by the deployment
 # platform — never passed as build args or baked into image layers.
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_BASE_URL
 ARG APP_URL
+# Read by next.config.mjs to allow uploaded images in the page's security policy.
+ARG S3_BUCKET
+ARG AWS_REGION=eu-central-1
 
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV APP_URL=$APP_URL
+ENV S3_BUCKET=$S3_BUCKET
+ENV AWS_REGION=$AWS_REGION
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build

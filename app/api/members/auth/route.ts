@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/app/lib/db';
-import { generateMemberLinkDetails, sendResendEmail } from '@/app/lib/member-auth';
+import { sendSignInEmail } from '@/app/lib/member-auth';
+import { createSignInCode } from '@/app/lib/auth';
 import { checkRateLimit, getClientIp, isValidEmail, retryAfterSeconds } from '@/app/lib/request-security';
 import { getBaseUrl } from '@/app/lib/site-url';
 
@@ -46,32 +47,15 @@ export async function POST(request: NextRequest) {
         }
 
         const baseUrl = getBaseUrl(request);
-        const { link: magicLink, otp } = await generateMemberLinkDetails(normalizedEmail, `${baseUrl}/auth/callback`, ['magiclink', 'invite', 'signup']);
+        const { linkToken, code, expiresInMinutes } = await createSignInCode(member.email, 'member');
+        const link = `${baseUrl}/auth/callback?token=${encodeURIComponent(linkToken)}`;
+
         // Local development has no mail delivery to rely on; hand the link straight back.
         if (process.env.NODE_ENV !== 'production') {
-            return NextResponse.json({ ok: true, devLink: magicLink });
+            return NextResponse.json({ ok: true, devLink: link });
         }
 
-        const firstName = (member.name || 'there').split(' ')[0];
-        const otpText = otp ? `\n\nOr enter this code on the sign-in page: ${otp}` : '';
-        const text = `Welcome back, ${firstName}
-
-Sign in to RCCEB using the link below. This link expires in 15 minutes.
-
-${magicLink}${otpText}
-
-If you didn't request this, you can safely ignore this email.`;
-        const html = `<p>Welcome back, ${firstName}</p>
-<p><a href="${magicLink}">Click this link to log in</a></p>
-${otp ? `<p>Or enter this code on the sign-in page: <strong style="font-size:18px;letter-spacing:2px;">${otp}</strong></p>` : ''}
-<p>If you didn't request this, you can safely ignore this email.</p>`;
-
-        await sendResendEmail({
-            to: member.email,
-            subject: 'Your RCCEB login link',
-            text,
-            html,
-        });
+        await sendSignInEmail({ to: member.email, name: member.name, link, code, minutes: expiresInMinutes, audience: 'member' });
 
         return NextResponse.json({ ok: true });
     } catch (err) {
@@ -80,7 +64,7 @@ ${otp ? `<p>Or enter this code on the sign-in page: <strong style="font-size:18p
     }
 }
 
-// DELETE /api/members/auth — logout handled client-side via Supabase auth
+// DELETE /api/members/auth — kept for compatibility; sign-out is POST /api/auth/logout
 export async function DELETE() {
     return NextResponse.json({ ok: true });
 }

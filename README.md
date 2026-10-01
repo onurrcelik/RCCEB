@@ -1,7 +1,7 @@
 # RCCEB Portal
 
 Member portal and admin dashboard for the **Robert College Community Entrepreneurs Bond**.
-Next.js (App Router) + Supabase (auth, Postgres, storage) + Resend (email).
+Next.js (App Router) + AWS Aurora PostgreSQL (data, sign-in sessions) + AWS S3 (uploaded images) + Resend (email).
 
 Adapted from the Exposure portal, without payments, Overexposed, YouTube, rejections,
 AI Academy, talent pool, newsletter, email templates, Welcome Summer, the mobile app
@@ -24,21 +24,26 @@ are in `tailwind.config.ts`.
 
 ## Setup
 
-1. Create a Supabase project. Open the SQL editor and run `supabase/schema.sql` once.
-   It creates every table and the `avatars` / `events` storage buckets.
-2. In Supabase Auth → URL configuration, set the Site URL to your `APP_URL` and add
-   `APP_URL/auth/callback` and `APP_URL/auth/admin/callback` as redirect URLs.
-3. `cp .env.example .env.local` and fill it in. At minimum you need the Supabase keys,
-   `DATABASE_URL`, `APP_URL` and `ADMIN_EMAILS`. Add `RESEND_API_KEY` to send real email.
-4. Then run:
+1. **Database.** Create an Aurora PostgreSQL cluster: Serverless v2 with a minimum of
+   0 ACU so it pauses when idle, publicly accessible, and port 5432 open to your IP in
+   its security group. Put the writer endpoint in `DATABASE_URL`.
+2. **Uploads.** Create an S3 bucket whose `avatars/*` and `events/*` paths are publicly
+   readable, plus an IAM user that can only `s3:PutObject` into that bucket. Put the
+   bucket name and the user's access keys in `.env.local`.
+3. `cp .env.example .env.local` and fill it in. Generate each secret with
+   `openssl rand -base64 32`.
+4. Run:
 
 ```bash
 npm install
+npm run db:setup   # creates/updates every table from db/schema.sql (safe to re-run)
 npm run dev
 ```
 
-In development, the sign-in endpoints skip email and return the magic link directly, so
-you can log in without Resend. Sign in at `/admin/login` with an `ADMIN_EMAILS` address.
+Sign-in is built in (`app/lib/auth.ts`): an emailed link plus a 6-digit code, with
+sessions stored in Aurora. In development the sign-in endpoints skip email and redirect
+you straight through, so you can log in without Resend. Sign in at `/admin/login` with an
+`ADMIN_EMAILS` address.
 
 ## How someone becomes a member
 
@@ -82,11 +87,12 @@ Admin → Matches.
 | `app/admin/` | Admin dashboard pages. |
 | `app/api/` | Route handlers. `applications`, `cron`, `jobs`, `match-confirm` and `unsubscribe` are public and do their own checks. |
 | `app/lib/` | Server helpers: DB, auth, email, categories, brand. |
-| `supabase/schema.sql` | The whole database schema. |
+| `db/schema.sql` | The whole database schema (`npm run db:setup` applies it). |
 | `brand/` | The full-resolution seal (not served). |
 
 ## Deploy
 
 `Dockerfile` builds a standalone Node image with Tesseract installed, which attendance
-OCR needs. Any Node host works. Pass the `NEXT_PUBLIC_*` variables and `APP_URL` as
-build args, and the secrets as runtime env.
+OCR needs. Any Node host works. Pass `APP_URL`, `NEXT_PUBLIC_BASE_URL`, `S3_BUCKET` and
+`AWS_REGION` as build args, and the secrets as runtime env. The server's IP must be
+allowed on port 5432 in the database's security group.

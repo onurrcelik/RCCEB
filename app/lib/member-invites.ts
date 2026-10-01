@@ -2,10 +2,8 @@ import { createHash, randomBytes } from 'crypto';
 import { query } from '@/app/lib/db';
 
 // Onboarding invites are sent by an admin and opened on a human timescale — hours,
-// often days. A Supabase action link can't carry that: it expires on the project's
-// OTP timeout and is consumed by the first GET, which is frequently a mail-scanner
-// prefetch rather than the member. So the email carries our own token instead, and
-// /members/invite trades it for a freshly minted Supabase link at click time.
+// often days, so the invite carries its own long-lived token (30 days), separate from
+// the 15-minute sign-in codes. /members/invite trades it for a session at click time.
 export const INVITE_TTL_DAYS = 30;
 
 export function hashInviteToken(token: string): string {

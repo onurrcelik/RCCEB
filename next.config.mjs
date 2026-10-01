@@ -1,12 +1,9 @@
 const isDev = process.env.NODE_ENV === 'development';
 
-const supabaseHost = (() => {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').host;
-  } catch {
-    return '';
-  }
-})();
+// Uploaded images are served straight from the S3 bucket.
+const s3Host = process.env.S3_BUCKET
+  ? `${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION || 'eu-central-1'}.amazonaws.com`
+  : '';
 
 const securityHeaders = [
   {
@@ -15,11 +12,10 @@ const securityHeaders = [
       "default-src 'self'",
       `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
       "style-src 'self' 'unsafe-inline'",
-      // Avatars and event photos are served from Supabase Storage; members also paste
-      // LinkedIn photo URLs.
-      `img-src 'self' data: blob: https://*.supabase.co https://media.licdn.com`,
+      // Avatars and event photos come from S3; members also paste LinkedIn photo URLs.
+      `img-src 'self' data: blob:${s3Host ? ` https://${s3Host}` : ''} https://media.licdn.com`,
       "font-src 'self' data:",
-      `connect-src 'self'${isDev ? ' ws: http://localhost:*' : ''} https://*.supabase.co`,
+      `connect-src 'self'${isDev ? ' ws: http://localhost:*' : ''}`,
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -38,7 +34,7 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   images: {
-    remotePatterns: supabaseHost ? [{ protocol: 'https', hostname: supabaseHost }] : [],
+    remotePatterns: s3Host ? [{ protocol: 'https', hostname: s3Host }] : [],
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
