@@ -22,7 +22,7 @@ export function ExpertisePicker({
                         key={option}
                         type="button"
                         onClick={() => toggle(option)}
-                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+                        className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors sm:min-h-0 ${
                             on
                                 ? 'border-gold-400 bg-gold-400/15 text-white'
                                 : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500'

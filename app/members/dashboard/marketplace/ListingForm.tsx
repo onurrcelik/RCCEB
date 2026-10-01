@@ -69,7 +69,7 @@ export function ListingForm({ listing, onCancel, onSaved }: Props) {
                         maxLength={140}
                         required
                         placeholder="e.g. I can help with pitch decks"
-                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                 </label>
 
@@ -82,7 +82,7 @@ export function ListingForm({ listing, onCancel, onSaved }: Props) {
                         required
                         rows={5}
                         placeholder="What tasks can you help with?"
-                        className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm leading-relaxed text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm leading-relaxed text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                 </label>
 
@@ -94,7 +94,7 @@ export function ListingForm({ listing, onCancel, onSaved }: Props) {
                         maxLength={300}
                         required
                         placeholder="e.g. email me at you@example.com, or DM on LinkedIn"
-                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                 </label>
 

@@ -19,3 +19,13 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* 16px stops iOS from zooming the page when a field is focused. Desktop stays on its own type size. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    scroll-margin-top: 5.5rem;
+  }
+}

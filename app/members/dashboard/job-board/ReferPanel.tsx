@@ -177,7 +177,7 @@ export function ReferPanel({ postId, shareToken, authorId, onCancel, onReferred 
                                     maxLength={MAX_REFERRAL_NOTE_LENGTH}
                                     rows={3}
                                     placeholder="Why they'd be great for this — they'll see this in the referral."
-                                    className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                                    className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm leading-relaxed text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                                 />
                             </div>
                         )}

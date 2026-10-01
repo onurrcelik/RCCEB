@@ -7,7 +7,7 @@ import { EventImageGrid } from '@/app/components/events/EventImageGrid';
 import { EventLightbox } from '@/app/components/events/EventLightbox';
 import { EventRecord, formatEventDate } from '@/app/lib/events';
 import {
-    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon, BuildingOffice2Icon
+    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon, BuildingOffice2Icon, Bars3Icon
 } from '@heroicons/react/24/outline';
 import { LinkedinIcon, GithubIcon, InstagramIcon, YoutubeIcon } from '@/app/components/ui/BrandIcons';
 import { categoryLabel, classYearLabel, MEMBER_CATEGORIES } from '@/app/lib/categories';
@@ -343,13 +343,13 @@ function MemberModal({ member, onClose, isSelf, onEdit }: { member: Member; onCl
                 onClick={e => e.stopPropagation()}
             >
                 <div className="p-6 pb-5 border-b border-zinc-700 shrink-0">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors">
+                    <button onClick={onClose} aria-label="Close" className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center text-zinc-400 hover:text-white transition-colors md:top-4 md:right-4 md:h-auto md:w-auto">
                         <XMarkIcon className="w-5 h-5" />
                     </button>
                     <div className="flex items-center gap-4">
                         <Avatar url={member.avatar_url} name={member.name} className="w-24 h-24 shrink-0" textClass="text-2xl" />
-                        <div>
-                            <h2 className="text-lg font-bold text-white">{member.name}</h2>
+                        <div className="min-w-0 pr-8 md:pr-0">
+                            <h2 className="text-lg font-bold text-white break-words">{member.name}</h2>
                             <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                 <MemberBadges member={member} size="md" />
                             </div>
@@ -486,7 +486,7 @@ function MobileSidebarOverlay({
                 style={{ height: '100dvh', maxHeight: '100dvh' }}
                 onClick={e => e.stopPropagation()}
             >
-                <div className="shrink-0 border-b border-zinc-800 bg-navy-925 px-5 py-4 pt-10">
+                <div className="shrink-0 border-b border-zinc-800 bg-navy-925 px-5 py-4 pt-[max(2.5rem,env(safe-area-inset-top))]">
                     <button onClick={() => { setActiveSection(DEFAULT_SECTION); onClose(); }} className="block text-left">
                         <RccebLogo className="mb-2.5 ml-2" />
                         <span className="inline-flex items-center rounded-full bg-gold-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-gold-300 ml-2">Member Portal</span>
@@ -498,7 +498,7 @@ function MobileSidebarOverlay({
                             <button
                                 key={id}
                                 onClick={() => { setActiveSection(id); onClose(); }}
-                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium transition-all ${
                                     activeSection === id ? 'bg-gold-400/10 text-gold-300' : navInactive
                                 }`}
                             >
@@ -513,7 +513,7 @@ function MobileSidebarOverlay({
                     <div className="space-y-0.5">
                         <button
                             onClick={() => { setActiveSection('profile'); onClose(); }}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${activeSection === 'profile' ? 'bg-gold-400/10 text-gold-300' : 'text-zinc-300 hover:text-white hover:bg-zinc-900'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium transition-all ${activeSection === 'profile' ? 'bg-gold-400/10 text-gold-300' : 'text-zinc-300 hover:text-white hover:bg-zinc-900'}`}
                         >
                             <Avatar url={self?.avatar_url} name={self?.name} className="w-5 h-5 shrink-0" textClass="text-[9px]" />
                             <span className="truncate">{self?.name || 'My Profile'}</span>
@@ -844,15 +844,13 @@ function DashboardContent() {
             </aside>
 
             {/* Mobile header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-navy-925 border-b border-zinc-800 px-4 pt-6 pb-3 flex items-center justify-between">
+            <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-navy-925 border-b border-zinc-800 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between">
                 <button onClick={() => setActiveSection(DEFAULT_SECTION)} className="flex items-center gap-2">
                     <RccebLogo size={26} />
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gold-500/15 text-[9px] font-bold text-gold-300 tracking-[0.15em] uppercase">Member Portal</span>
                 </button>
-                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-zinc-300 p-1">
-                    <div className="w-5 h-0.5 bg-current mb-1" />
-                    <div className="w-5 h-0.5 bg-current mb-1" />
-                    <div className="w-5 h-0.5 bg-current" />
+                <button aria-label="Open menu" onClick={() => setSidebarOpen(!sidebarOpen)} className="flex h-11 w-11 shrink-0 items-center justify-center text-zinc-300">
+                    <Bars3Icon className="h-6 w-6" />
                 </button>
             </div>
 
@@ -870,8 +868,8 @@ function DashboardContent() {
             <main className={activeSection === 'match' ? 'w-full max-w-[100vw] lg:max-w-none min-w-0 flex-1 overflow-x-hidden lg:overflow-x-visible md:ml-60 min-h-screen' : 'flex-1 md:ml-60 min-h-screen'}>
                 <div className={
                     activeSection === 'match'
-                        ? 'max-w-[100vw] lg:max-w-5xl mx-auto w-full lg:w-auto min-w-0 overflow-x-hidden lg:overflow-visible px-4 md:px-8 py-8 md:py-10 mt-14 md:mt-0'
-                        : 'max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10 mt-14 md:mt-0'
+                        ? 'max-w-[100vw] lg:max-w-5xl mx-auto w-full lg:w-auto min-w-0 overflow-x-hidden lg:overflow-visible px-4 md:px-8 py-8 md:py-10 mt-[calc(3.75rem+env(safe-area-inset-top))] md:mt-0'
+                        : 'max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10 mt-[calc(3.75rem+env(safe-area-inset-top))] md:mt-0'
                 }>
                     {/* Section headers */}
                     <div className="mb-8">
@@ -962,7 +960,7 @@ function DashboardContent() {
                                             key={option.id ?? 'all'}
                                             type="button"
                                             onClick={() => setCategoryFilter(option.id)}
-                                            className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition-all ${
+                                            className={`rounded-full border px-3 py-2 md:py-1.5 text-[11px] font-medium transition-all ${
                                                 selected
                                                     ? 'border-gold-400 bg-gold-400 text-zinc-950'
                                                     : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500 hover:text-white'
@@ -1451,26 +1449,26 @@ function DashboardContent() {
                                                 value={ref.name}
                                                 onChange={e => setReferrals(prev => prev.map((r, idx) => idx === i ? { ...r, name: e.target.value } : r))}
                                                 placeholder="Full name"
-                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors"
+                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                             />
                                             <input
                                                 value={ref.email}
                                                 onChange={e => setReferrals(prev => prev.map((r, idx) => idx === i ? { ...r, email: e.target.value } : r))}
                                                 placeholder="Phone number"
-                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors"
+                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                             />
                                             <input
                                                 value={ref.linkedin}
                                                 onChange={e => setReferrals(prev => prev.map((r, idx) => idx === i ? { ...r, linkedin: e.target.value } : r))}
                                                 placeholder="LinkedIn"
-                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors"
+                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                             />
                                             <textarea
                                                 value={ref.notes}
                                                 onChange={e => setReferrals(prev => prev.map((r, idx) => idx === i ? { ...r, notes: e.target.value } : r))}
                                                 placeholder="Additional notes (optional)"
                                                 rows={2}
-                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors resize-none"
+                                                className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400 text-sm transition-colors resize-none"
                                             />
                                         </div>
                                     </div>
@@ -1519,7 +1517,7 @@ function DashboardContent() {
                                     <div className="flex-1 px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-6 min-w-0">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                <div className="font-semibold text-zinc-950 text-sm">{event.title}</div>
+                                                <div className="font-semibold text-white text-sm">{event.title}</div>
                                                 {event.upcoming && (
                                                     <span className="text-[10px] font-bold bg-gold-400 text-zinc-950 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                                                         <SparklesIcon className="w-2.5 h-2.5" /> Upcoming
@@ -1739,10 +1737,10 @@ function EmailChangeCard({ member, onSave }: { member: SelfMember; onSave: (upda
 
     if (!editing) {
         return (
-            <div className="flex items-center justify-between bg-zinc-900/60 border border-zinc-700 rounded-2xl p-6">
-                <div>
+            <div className="flex flex-col items-start gap-3 bg-zinc-900/60 border border-zinc-700 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="min-w-0">
                     <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Sign-in email</div>
-                    <div className="text-zinc-950 text-sm">{member.email}</div>
+                    <div className="text-white text-sm break-all">{member.email}</div>
                 </div>
                 <button
                     onClick={() => setEditing(true)}
@@ -1764,7 +1762,7 @@ function EmailChangeCard({ member, onSave }: { member: SelfMember; onSave: (upda
                         value={newEmail}
                         onChange={e => setNewEmail(e.target.value)}
                         placeholder="new-email@example.com"
-                        className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-3.5 py-2.5 text-zinc-950 placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm"
+                        className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-3.5 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm"
                     />
                     {error && <p className="text-red-400 text-xs">{error}</p>}
                     <div className="flex items-center gap-3">
@@ -1790,7 +1788,7 @@ function EmailChangeCard({ member, onSave }: { member: SelfMember; onSave: (upda
                         value={code}
                         onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="123456"
-                        className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-3.5 py-2.5 text-zinc-950 text-center tracking-[0.4em] font-bold placeholder:tracking-normal placeholder:font-normal placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm"
+                        className="w-full bg-zinc-800 border border-zinc-600 rounded-xl px-3.5 py-2.5 text-white text-center tracking-[0.4em] font-bold placeholder:tracking-normal placeholder:font-normal placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm"
                     />
                     {error && <p className="text-red-400 text-xs">{error}</p>}
                     <div className="flex items-center gap-3">
@@ -1901,7 +1899,7 @@ function CompanyModal({
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
             <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-2xl overflow-hidden animate-fade-in max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="p-6 pb-5 border-b border-zinc-700 shrink-0">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors">
+                    <button onClick={onClose} aria-label="Close" className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center text-zinc-400 hover:text-white transition-colors md:top-4 md:right-4 md:h-auto md:w-auto">
                         <XMarkIcon className="w-5 h-5" />
                     </button>
                     <h2 className="text-lg font-bold text-white pr-8">{company.name}</h2>
@@ -1961,10 +1959,10 @@ function ProfileModal({ member, onClose, onSave }: { member: SelfMember; onClose
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <div className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 animate-fade-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-base font-bold text-white">Edit Profile</h2>
-                    <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors"><XMarkIcon className="w-5 h-5" /></button>
+                    <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center text-zinc-400 hover:text-white transition-colors md:h-auto md:w-auto"><XMarkIcon className="w-5 h-5" /></button>
                 </div>
                 <MemberProfileEditor member={member} onSave={updated => onSave(updated as Partial<SelfMember>)} />
                 <div className="mt-4 pt-4 border-t border-zinc-700">

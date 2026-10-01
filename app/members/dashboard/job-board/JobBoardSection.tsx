@@ -216,7 +216,7 @@ export function JobBoardSection() {
                         value={search}
                         onChange={event => setSearch(event.target.value)}
                         placeholder="Search titles, descriptions, people, companies..."
-                        className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-3 pl-10 pr-10 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-3 pl-10 pr-10 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                     {search && (
                         <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">

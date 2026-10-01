@@ -53,7 +53,7 @@ export function ApplyForm({ postId, onCancel, onApplied }: Props) {
                     autoFocus
                     rows={4}
                     placeholder="A sentence or two on why you're a good match — the poster reads this first."
-                    className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                    className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm leading-relaxed text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                 />
             </div>
 
@@ -66,7 +66,7 @@ export function ApplyForm({ postId, onCancel, onApplied }: Props) {
                     onChange={event => setLink(event.target.value)}
                     maxLength={500}
                     placeholder="https://"
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                 />
             </label>
 

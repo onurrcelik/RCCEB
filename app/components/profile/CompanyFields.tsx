@@ -25,7 +25,7 @@ export function CompanyFields({
                             <button
                                 type="button"
                                 onClick={() => onChange(companies.filter((_, i) => i !== index))}
-                                className="text-zinc-500 hover:text-red-400 transition-colors"
+                                className="flex h-11 w-11 items-center justify-center text-zinc-500 hover:text-red-400 transition-colors md:h-auto md:w-auto"
                             >
                                 <TrashIcon className="h-4 w-4" />
                                 <span className="sr-only">Remove company</span>
@@ -71,7 +71,7 @@ export function CompanyFields({
                 <button
                     type="button"
                     onClick={() => onChange([...companies, { ...EMPTY_COMPANY }])}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-300 hover:text-white transition-colors"
+                    className="inline-flex min-h-11 items-center gap-1.5 py-2 text-xs font-semibold text-gold-300 hover:text-white transition-colors md:min-h-0 md:py-0"
                 >
                     <PlusIcon className="h-4 w-4" />
                     Add another company

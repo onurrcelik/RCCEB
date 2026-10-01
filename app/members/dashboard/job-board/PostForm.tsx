@@ -68,7 +68,7 @@ export function PostForm({ post, onCancel, onSaved }: Props) {
                         onChange={event => setTitle(event.target.value)}
                         maxLength={140}
                         required
-                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                 </label>
 
@@ -80,7 +80,7 @@ export function PostForm({ post, onCancel, onSaved }: Props) {
                         maxLength={5000}
                         required
                         rows={6}
-                        className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm leading-relaxed text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm leading-relaxed text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                 </label>
 
@@ -92,7 +92,7 @@ export function PostForm({ post, onCancel, onSaved }: Props) {
                         value={location}
                         onChange={event => setLocation(event.target.value)}
                         maxLength={120}
-                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-gold-400"
                     />
                 </label>
 

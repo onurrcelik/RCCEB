@@ -203,7 +203,7 @@ function OnboardingContent() {
     return (
         <div className="min-h-screen bg-zinc-950">
             {/* Top bar */}
-            <div className="px-6 md:px-12 py-4 pt-8 md:pt-8 border-b border-zinc-900">
+            <div className="px-4 md:px-12 py-4 pt-[max(1.25rem,env(safe-area-inset-top))] md:pt-8 border-b border-zinc-900">
                 <div className="flex items-center justify-between">
                     <Link href="/members/dashboard" className="inline-flex flex-col">
                         <RccebLogo className="mb-2.5 ml-2" />
@@ -245,12 +245,12 @@ function OnboardingContent() {
                 </div>
             </div>
 
-            <div className="max-w-2xl mx-auto px-6 py-12 pb-40 md:pb-12">
+            <div className="max-w-2xl mx-auto px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] md:px-6 md:py-12 md:pb-12">
 
                 {/* ── Step 1: Profile ── */}
                 {step === 1 && (
                     <div className="animate-fade-in">
-                        <div className="mb-8">
+                        <div className="mb-6 md:mb-8">
                             <h1 className="text-2xl font-bold text-white">Complete your profile</h1>
                         </div>
 
@@ -264,7 +264,7 @@ function OnboardingContent() {
                                         ) : avatarUrl ? (
                                             <>
                                                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute inset-0 bg-black/60 hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <CameraIcon className="w-5 h-5 text-zinc-950" />
                                                 </div>
                                             </>
@@ -272,11 +272,9 @@ function OnboardingContent() {
                                             <CameraIcon className="w-7 h-7 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
                                         )}
                                     </div>
-                                    {!avatarUrl && (
-                                        <div className="absolute bottom-0 right-0 w-7 h-7 bg-gold-400 rounded-full flex items-center justify-center border-2 border-black">
-                                            <CameraIcon className="w-3.5 h-3.5 text-zinc-950" />
-                                        </div>
-                                    )}
+                                    <div className={`absolute bottom-0 right-0 w-7 h-7 bg-gold-400 rounded-full items-center justify-center border-2 border-black ${avatarUrl ? 'flex md:hidden' : 'flex'}`}>
+                                        <CameraIcon className="w-3.5 h-3.5 text-zinc-950" />
+                                    </div>
                                     <input
                                         type="file"
                                         accept="image/jpeg,image/png,image/webp"
@@ -298,6 +296,7 @@ function OnboardingContent() {
                                     <input
                                         value={form.name}
                                         onChange={e => update('name', e.target.value)}
+                                        autoComplete="name"
                                         placeholder="Alex Johnson"
                                         className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                     />
@@ -311,6 +310,9 @@ function OnboardingContent() {
                                     <input
                                         value={form.phone}
                                         onChange={e => update('phone', e.target.value)}
+                                        type="tel"
+                                        inputMode="tel"
+                                        autoComplete="tel"
                                         placeholder="+90 555 000 00 00"
                                         className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                     />
@@ -338,6 +340,8 @@ function OnboardingContent() {
                                     <input
                                         value={form.linkedin}
                                         onChange={e => update('linkedin', e.target.value)}
+                                        inputMode="url"
+                                        autoComplete="url"
                                         placeholder="linkedin.com/in/..."
                                         className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
                                     />
@@ -473,7 +477,7 @@ function OnboardingContent() {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {referrals.map((ref, i) => (
                                 <div key={i} className="bg-zinc-900/60 border border-zinc-700 rounded-2xl p-5">
                                     <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
