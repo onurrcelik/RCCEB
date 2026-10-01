@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.next
+out
+build
+.env
+.env.*
+!.env.example
+.git
+.claude
+.vscode
+.idea
+.DS_Store
+*.tsbuildinfo
+brand
