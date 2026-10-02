@@ -52,17 +52,26 @@ export async function sendResendEmail({
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) throw new Error('RESEND_API_KEY is missing');
 
-    if (category === 'marketing' && await isUnsubscribed(to)) return;
+    const marketing = category === 'marketing';
+    if (marketing && await isUnsubscribed(to)) return;
 
+    // Unsubscribe links only go on marketing mail. Transactional mail is delivered
+    // regardless, so an Unsubscribe link on a sign-in email would do nothing.
     // Must be an https URL: List-Unsubscribe-Post advertises RFC 8058 one-click,
     // and mail clients POST to it. A mailto: here makes the client's Unsubscribe
     // button silently do nothing — which is exactly what members reported.
-    const unsubscribeUrl = buildUnsubscribeUrl(to);
-    const defaultHeaders = {
-        'List-Unsubscribe': `<${unsubscribeUrl}>, <mailto:${replyToAddress()}?subject=unsubscribe>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    const unsubscribeUrl = marketing ? buildUnsubscribeUrl(to) : null;
+    const defaultHeaders: Record<string, string> = {
         'X-Entity-Ref-ID': `rcceb-${Date.now()}`,
+        ...(unsubscribeUrl ? {
+            'List-Unsubscribe': `<${unsubscribeUrl}>, <mailto:${replyToAddress()}?subject=unsubscribe>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        } : {}),
     };
+    const textFooter = `\n\n—\n${BRAND.name}` + (unsubscribeUrl ? `\n\nUnsubscribe: ${unsubscribeUrl}` : '');
+    const htmlFooter = `<p style="color:#999;font-size:11px;margin-top:32px;border-top:1px solid #eee;padding-top:12px;">${BRAND.name}`
+        + (unsubscribeUrl ? ` &nbsp;·&nbsp; <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe</a>` : '')
+        + '</p>';
 
     const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -72,11 +81,12 @@ export async function sendResendEmail({
         },
         body: JSON.stringify({
             from,
+            reply_to: [replyToAddress()],
             to: [to],
             subject,
-            text: text + `\n\n—\n${BRAND.name}\n\nUnsubscribe: ${unsubscribeUrl}`,
+            text: text + textFooter,
             headers: { ...defaultHeaders, ...extraHeaders },
-            ...(html ? { html: html + `<p style="color:#999;font-size:11px;margin-top:32px;border-top:1px solid #eee;padding-top:12px;">${BRAND.name} &nbsp;·&nbsp; <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe</a></p>` } : {}),
+            ...(html ? { html: html + htmlFooter } : {}),
         }),
     });
 
