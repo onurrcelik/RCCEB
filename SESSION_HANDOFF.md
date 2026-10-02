@@ -1,5 +1,7 @@
 # RCCEB session handoff — updated 2 October 2026
 
+> **Update, 2 October 2026 evening:** the portal now runs at **www.rcceb.org/members** and **/admin** (multi-zone behind the landing site), `APP_URL` is `https://www.rcceb.org`, and the landing site has its own repo. Where this file disagrees about URLs or deploying, **`DEPLOYMENT.md` is current.**
+
 Handoff for the next person or model working in `/Users/onurcelik/Desktop/RCCEB`. This covers the member portal, admin portal, the production deploy, and the email setup. Do not print secrets from `.env.local` or from the Vercel project. Do not commit this file unless Onur asks.
 
 The public marketing site is https://www.rcceb.org/. This repo is only the member and admin portals.
