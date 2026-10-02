@@ -24,8 +24,11 @@ export function companyNameKey(name: string): string {
     return name.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-export function normalizeCompanyDrafts(value: unknown, options?: { requireRole?: boolean }): { companies?: NormalizedCompany[]; error?: string } {
+// Members must give a role and a website for each company (the website is what other
+// members open from the company page). Admins can save partial companies.
+export function normalizeCompanyDrafts(value: unknown, options?: { requireRole?: boolean; requireWebsite?: boolean }): { companies?: NormalizedCompany[]; error?: string } {
     const requireRole = options?.requireRole !== false;
+    const requireWebsite = options?.requireWebsite !== false;
     if (!Array.isArray(value)) return { error: 'Companies must be a list' };
 
     const companies: NormalizedCompany[] = [];
@@ -42,6 +45,7 @@ export function normalizeCompanyDrafts(value: unknown, options?: { requireRole?:
         if (!name && !role && !website && !linkedin) continue;
         if (!name) return { error: 'Each company needs a name' };
         if (requireRole && !role) return { error: 'Add your role at each company' };
+        if (requireWebsite && !website) return { error: 'Add a website for each company' };
         if (name.length > MAX_NAME) return { error: 'A company name is too long' };
         if (role.length > MAX_ROLE) return { error: 'A role is too long' };
         if (website.length > MAX_LINK || linkedin.length > MAX_LINK) return { error: 'A company link is too long' };

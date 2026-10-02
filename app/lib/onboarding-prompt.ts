@@ -47,7 +47,7 @@ Write in English, first person, warm and natural, not corporate. No em dashes, n
 
 5. Companies I'm affiliated with
    One line per company: Company name | My role | Website | Company LinkedIn
-   (leave website or LinkedIn blank if I don't know them).
+   The website is required for every company; ask me if you don't know it. Leave the LinkedIn blank if you don't know it.
 
 6. Education after RC
    Degrees and schools after Robert College, e.g. "BSc Economics, Boğaziçi; MBA, INSEAD". Write "None" if there aren't any.

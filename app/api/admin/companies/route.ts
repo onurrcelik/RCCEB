@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const drafts = companyName.split(/[,;\n]/).map((name: string) => ({ name: name.trim(), website: '', linkedin: '' })).filter((company: { name: string }) => company.name);
-    const { companies, error } = normalizeCompanyDrafts(drafts, { requireRole: false });
+    const { companies, error } = normalizeCompanyDrafts(drafts, { requireRole: false, requireWebsite: false });
     if (error || !companies?.length) {
         return NextResponse.json({ error: error || 'Company name is required' }, { status: 400 });
     }

@@ -15,11 +15,14 @@ export function ChatGptPromptDialog({ prompt, onApply, onClose }: {
     onClose: () => void;
 }) {
     const [copied, setCopied] = useState(false);
+    // Step 2 appears once they've taken the prompt (copied it, or opened it to copy by hand).
+    const [promptTaken, setPromptTaken] = useState(false);
     const [showPrompt, setShowPrompt] = useState(false);
     const [reply, setReply] = useState('');
     const [parseError, setParseError] = useState('');
 
     async function copy() {
+        setPromptTaken(true);
         try {
             await navigator.clipboard.writeText(prompt);
         } catch {
@@ -74,7 +77,7 @@ export function ChatGptPromptDialog({ prompt, onApply, onClose }: {
                         {copied ? 'Copied. Paste it into ChatGPT' : 'Copy my ChatGPT prompt'}
                     </button>
                     <div className="mt-2 flex items-center justify-between">
-                        <button onClick={() => setShowPrompt(s => !s)} className="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-4">
+                        <button onClick={() => { setShowPrompt(s => !s); setPromptTaken(true); }} className="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-4">
                             {showPrompt ? 'Hide the prompt' : 'See the prompt'}
                         </button>
                         <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-gold-200 hover:text-gold-100">
@@ -93,14 +96,14 @@ export function ChatGptPromptDialog({ prompt, onApply, onClose }: {
                 </div>
 
                 {/* Step 2 */}
-                <div className="mt-6">
+                {promptTaken && <div className="mt-6 animate-fade-in">
                     <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-2">
                         <span className="text-gold-300">Step 2</span> · Paste ChatGPT&apos;s whole reply
                     </div>
                     <textarea
                         value={reply}
                         onChange={e => { setReply(e.target.value); setParseError(''); }}
-                        placeholder={'1. Bio\n…\n2. What I can help with\n…'}
+                        autoFocus
                         className="w-full h-32 rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-sm leading-relaxed text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400/50"
                     />
                     {parseError && <p className="mt-2 text-xs text-red-300">{parseError}</p>}
@@ -112,7 +115,7 @@ export function ChatGptPromptDialog({ prompt, onApply, onClose }: {
                         <SparklesIcon className="w-4 h-4" />
                         Fill my profile
                     </button>
-                </div>
+                </div>}
 
                 <button onClick={onClose} className="mt-5 w-full rounded-xl py-3 text-sm font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     I&apos;ll fill it in myself

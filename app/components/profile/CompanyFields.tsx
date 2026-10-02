@@ -52,7 +52,7 @@ export function CompanyFields({
                         <input
                             value={company.website ?? ''}
                             onChange={e => update(index, 'website', e.target.value)}
-                            placeholder="Website (optional)"
+                            placeholder="Website, e.g. acme.com"
                             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm"
                         />
                     </div>

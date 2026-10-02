@@ -181,7 +181,10 @@ function OnboardingContent() {
         if (!form.working_on) missing.push("What I'm working on");
         if (expertise.length < 1) missing.push('Expertise');
         if (!companies.some(company => company.name.trim())) missing.push('Companies you are affiliated with');
-        else if (companies.some(company => company.name.trim() && !company.role.trim())) missing.push('Your role at each company');
+        else {
+            if (companies.some(company => company.name.trim() && !company.role.trim())) missing.push('Your role at each company');
+            if (companies.some(company => company.name.trim() && !company.website.trim())) missing.push('A website for each company');
+        }
         if (!form.education) missing.push('Education after RC');
         if (!form.favorite_resource) missing.push('Favorite Read / Video / Person / Source');
         if (missing.length > 0) {
