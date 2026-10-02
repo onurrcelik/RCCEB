@@ -180,11 +180,12 @@ export async function POST(request: NextRequest) {
         if (openRounds[0]) {
             return NextResponse.json({ error: 'A round is already open. Run the match or delete that round first.' }, { status: 400 });
         }
-        const { round } = await createMatchRound();
+        const { round, autoJoined } = await createMatchRound();
         if (!round) return NextResponse.json({ error: 'Failed to create round' }, { status: 500 });
-        // The round starts empty, so the invitation is what fills it: send it right away.
+        // Only auto-joiners are in so far; the invitation is what fills the rest, so send it
+        // right away. It skips the auto-joiners, who just get their match later.
         const { sent, failed } = await notifyRoundMembers(String(round.id));
-        return NextResponse.json({ ok: true, round, sent, failed });
+        return NextResponse.json({ ok: true, round, autoJoined, sent, failed });
     }
 
     // ── Run match (pairs only, no emails) ─────────────────────────────

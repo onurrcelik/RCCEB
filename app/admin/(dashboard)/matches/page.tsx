@@ -286,7 +286,7 @@ export default function MatchesPage() {
 
     const createRound = async () => {
         const month = new Date().toLocaleDateString('en-US', { month: 'long' });
-        if (!window.confirm(`Open ${month}'s 1-on-1 round and email every onboarded member an invitation?\n\nThe email explains how 1-on-1s work and has a "Count me in" button. Only members who join are matched.`)) return;
+        if (!window.confirm(`Open ${month}'s 1-on-1 round and email every onboarded member an invitation?\n\nThe email explains how 1-on-1s work and has a "Count me in" button. Only members who join are matched. Members who chose "every month" are put in automatically and don't get the email.`)) return;
         setCreating(true);
         try {
             const res = await fetch('/api/admin/matches', {
@@ -297,7 +297,8 @@ export default function MatchesPage() {
             const data = await res.json();
             if (!res.ok) { flash(data.error || 'Failed', false); return; }
             const failNote = data.failed ? ` (${data.failed} failed)` : '';
-            flash(`Round opened. Invitation sent to ${data.sent} members${failNote}. They appear under Opted in as they join.`, !data.failed);
+            const autoNote = data.autoJoined ? ` ${data.autoJoined} joined automatically (they chose every month).` : '';
+            flash(`Round opened.${autoNote} Invitation sent to ${data.sent} members${failNote}. They appear under Opted in as they join.`, !data.failed);
             await fetchRounds();
         } finally {
             setCreating(false);

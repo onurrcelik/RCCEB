@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic';
 // /api/match-confirm it sits outside /members and /api/members, so proxy.ts doesn't ask for
 // a session: the signed token in the link stands in for auth.
 //
+// "Count me in every month" is the same link with &a=always: it joins this month and sets
+// members.match_auto_opt_in, so later rounds put them in without asking.
+//
 // GET never writes. Mail scanners fetch links before the member does, so the page posts
 // the answer back with a script (which scanners don't run), with a button as fallback.
 
@@ -100,12 +103,23 @@ function leaveLink(params: Params) {
 <input type="hidden" name="action" value="leave"><button type="submit">Changed your mind? Sit this month out</button></form></div>`;
 }
 
-function joinedPage(params: Params, roundStatus: string) {
+async function isAutoJoiner(params: Params) {
+    const { rows } = await query<{ match_auto_opt_in: boolean }>('SELECT match_auto_opt_in FROM members WHERE id = $1', [params.memberId]);
+    return rows[0]?.match_auto_opt_in === true;
+}
+
+function joinedPage(params: Params, roundStatus: string, auto: boolean) {
     const late = roundStatus === 'matched';
+    const autoBlock = auto
+        ? `<p>You're also set to join <strong>every month</strong>: we'll skip the invitation and just send you your match. You can turn this off in the portal's 1:1 section.</p>`
+        : `<form method="post" action="/api/match-join?${params.queryString}" style="margin:0 0 4px">
+<input type="hidden" name="action" value="always"><button type="submit">Count me in every month</button></form>
+<p style="font-size:12px;margin:8px 0 0">Skip this email from now on and just get your match each month.</p>`;
     return page("You're in", `<h1>You're in for this month</h1>
 <p>${late
         ? "Matches already went out, so you're on the late list. We'll pair you up if we can and email you your match."
         : "We'll email you your match once the round runs, including who reaches out first."}</p>
+${autoBlock}
 ${late ? '' : leaveLink(params)}`);
 }
 
@@ -116,11 +130,14 @@ export async function GET(request: NextRequest) {
     if (result === 'invalid') return INVALID();
     if (result === 'closed') return CLOSED();
 
-    if ((await currentAnswer(params)) === true) return joinedPage(params, result.round.status);
+    const always = request.nextUrl.searchParams.get('a') === 'always';
+    if ((await currentAnswer(params)) === true && (!always || (await isAutoJoiner(params)))) {
+        return joinedPage(params, result.round.status, await isAutoJoiner(params));
+    }
 
-    return page('Joining', `<h1>Joining this month's 1-on-1…</h1>
+    return page('Joining', `<h1>Joining ${always ? 'every month' : "this month's 1-on-1"}…</h1>
 <form id="join-form" method="post" action="/api/match-join?${params.queryString}">
-<input type="hidden" name="action" value="join"><button type="submit">Count me in</button></form>
+<input type="hidden" name="action" value="${always ? 'always' : 'join'}"><button type="submit">Count me in</button></form>
 <script>document.getElementById('join-form').submit();</script>`);
 }
 
@@ -146,6 +163,9 @@ export async function POST(request: NextRequest) {
              ON CONFLICT (round_id, member_id) DO UPDATE SET opted_in = EXCLUDED.opted_in`,
             [params.roundId, params.memberId, joining],
         );
+        if (action === 'always') {
+            await query('UPDATE members SET match_auto_opt_in = true WHERE id = $1', [params.memberId]);
+        }
     } catch (error) {
         console.error('match-join write failed', error);
         return page('Something went wrong', `<h1>We couldn't save that</h1>
@@ -153,7 +173,7 @@ export async function POST(request: NextRequest) {
 ${PORTAL_LINK}`, 500);
     }
 
-    if (joining) return joinedPage(params, result.round.status);
+    if (joining) return joinedPage(params, result.round.status, await isAutoJoiner(params));
     return page('Sitting out', `<h1>No problem, you're sitting this month out</h1>
 <p>You won't be matched this month. We'll invite you again next month.</p>
 <div class="quiet"><form method="post" action="/api/match-join?${params.queryString}">

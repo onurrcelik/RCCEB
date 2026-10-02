@@ -39,18 +39,28 @@ export function roundDate(now = new Date()) {
     return now.toISOString().split('T')[0];
 }
 
-// Opens an empty round. Joining is opt-in each month: nobody is in until they say yes,
-// from the invitation email's "Count me in" button or from the portal.
+// Opens a round. Joining is opt-in: members who chose "join every month" are put in right
+// away; everyone else is in only once they say yes, from the invitation email's
+// "Count me in" button or from the portal.
 export async function createMatchRound() {
+    let round;
     try {
-        const { rows: [round] } = await query(
+        ({ rows: [round] } = await query(
             "INSERT INTO match_rounds (week_of, status) VALUES ($1, 'open') RETURNING *",
             [roundDate()],
-        );
-        return { round: round ?? null };
+        ));
     } catch {
-        return { round: null };
+        return { round: null, autoJoined: 0 };
     }
+    if (!round) return { round: null, autoJoined: 0 };
+
+    const pool = await loadMatchPool();
+    const { rowCount } = await query(
+        `INSERT INTO match_responses (round_id, member_id, opted_in)
+         SELECT $1, id, true FROM members WHERE match_auto_opt_in AND id = ANY($2)`,
+        [round.id, pool.uniqueIds],
+    );
+    return { round, autoJoined: rowCount ?? 0 };
 }
 
 // How the monthly 1-on-1s work, said once in the invitation so a member knows what they're
@@ -60,10 +70,12 @@ const HOW_IT_WORKS = [
     'You get one email with your match: who they are, how to reach them, and which one of you reaches out first.',
     "The person reaching out sends the first message and you set up a 30-minute conversation together, by call, video or over coffee, sometime this month.",
     "Only members who join are matched. Can't make it this month? Just ignore this email.",
+    'Want in every month? Choose "Count me in every month" and we\'ll skip this email and just send you your match.',
 ];
 
 // Invites the pool to this month's round. Anyone who has already answered (in or out) is
 // skipped, so the admin can send it again as a reminder without bothering people twice.
+// That includes auto-joiners, who are put in when the round opens and so never get it.
 //
 // It also carries last month's "did you meet?" question for anyone whose pair still has no
 // answer on it. A new round opening is the right moment to ask — the month it's about has
@@ -98,8 +110,8 @@ export async function notifyRoundMembers(roundId: string) {
             await sendResendEmail({
                 to: member.email,
                 subject: `Join ${month}'s ${BRAND.shortName} 1-on-1?`,
-                text: `Hey ${first},\n\n${askBlock ? `${askBlock.text}\n\n` : ''}${month}'s ${BRAND.shortName} 1-on-1 round is open. Want to meet another member this month?\n\nHow it works:\n${HOW_IT_WORKS.map(line => `- ${line}`).join('\n')}\n\nCount me in: ${joinLink}`,
-                html: `<p>Hey ${first},</p>${askBlock ? askBlock.html : ''}<p><strong>${month}'s ${BRAND.shortName} 1-on-1 round</strong> is open. Want to meet another member this month?</p><p style="margin:0 0 6px;font-weight:600">How it works</p><ul style="margin:0 0 20px;padding-left:20px;line-height:1.6">${HOW_IT_WORKS.map(line => `<li>${line}</li>`).join('')}</ul><p><a href="${joinLink}" style="display:inline-block;padding:12px 24px;background:${BRAND.colors.brandNavy};color:white;border-radius:8px;text-decoration:none;font-weight:600;">Count me in →</a></p>`,
+                text: `Hey ${first},\n\n${askBlock ? `${askBlock.text}\n\n` : ''}${month}'s ${BRAND.shortName} 1-on-1 round is open. Want to meet another member this month?\n\nHow it works:\n${HOW_IT_WORKS.map(line => `- ${line}`).join('\n')}\n\nCount me in: ${joinLink}\nCount me in every month: ${joinLink}&a=always`,
+                html: `<p>Hey ${first},</p>${askBlock ? askBlock.html : ''}<p><strong>${month}'s ${BRAND.shortName} 1-on-1 round</strong> is open. Want to meet another member this month?</p><p style="margin:0 0 6px;font-weight:600">How it works</p><ul style="margin:0 0 20px;padding-left:20px;line-height:1.6">${HOW_IT_WORKS.map(line => `<li>${line}</li>`).join('')}</ul><p><a href="${joinLink}" style="display:inline-block;padding:12px 24px;background:${BRAND.colors.brandNavy};color:white;border-radius:8px;text-decoration:none;font-weight:600;">Count me in →</a></p><p style="font-size:13px"><a href="${joinLink}&a=always" style="color:${BRAND.colors.brandNavy};font-weight:600;">Count me in every month</a></p>`,
                 category: 'marketing',
             });
             sent++;

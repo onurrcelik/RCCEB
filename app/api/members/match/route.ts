@@ -157,7 +157,10 @@ export async function GET(request: NextRequest) {
         }
     }
 
-    return NextResponse.json({ eligible, currentRound, myResponse, myCurrentMatch, isOpener, pendingConfirmation, matchHistory, currentMatchHistory });
+    const { rows: autoRows } = await query<{ match_auto_opt_in: boolean }>('SELECT match_auto_opt_in FROM members WHERE id = $1', [member.id]);
+    const autoOptIn = autoRows[0]?.match_auto_opt_in === true;
+
+    return NextResponse.json({ eligible, autoOptIn, currentRound, myResponse, myCurrentMatch, isOpener, pendingConfirmation, matchHistory, currentMatchHistory });
 }
 
 // POST — submit opt-in or confirmation
@@ -165,7 +168,34 @@ export async function POST(request: NextRequest) {
     const member = await getMemberFromRequest(request);
     if (!member) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { round_id, opted_in, confirmed_met } = await request.json();
+    const { round_id, opted_in, confirmed_met, auto_opt_in } = await request.json();
+
+    // "Join every month": future rounds put this member in when they open, and they skip
+    // the invitation. Turning it on also joins the round that's open right now, since
+    // that's what they just asked for. Turning it off leaves this month's answer alone.
+    if (auto_opt_in !== undefined) {
+        if (typeof auto_opt_in !== 'boolean') {
+            return NextResponse.json({ error: 'auto_opt_in must be a boolean' }, { status: 400 });
+        }
+        if (auto_opt_in && !isMatchEligible(member)) {
+            return NextResponse.json({ error: 'You are not in the 1-on-1 pool right now' }, { status: 403 });
+        }
+        await query('UPDATE members SET match_auto_opt_in = $1 WHERE id = $2', [auto_opt_in, member.id]);
+        if (auto_opt_in) {
+            const { rows: currentRounds } = await query<{ id: string; status: string }>(
+                'SELECT id, status FROM match_rounds ORDER BY created_at DESC LIMIT 1',
+            );
+            if (currentRounds[0]?.status === 'open') {
+                await query(
+                    `INSERT INTO match_responses (round_id, member_id, opted_in) VALUES ($1, $2, true)
+                     ON CONFLICT (round_id, member_id) DO UPDATE SET opted_in = true`,
+                    [currentRounds[0].id, member.id],
+                );
+            }
+        }
+        return NextResponse.json({ ok: true });
+    }
+
     if (!round_id) return NextResponse.json({ error: 'round_id required' }, { status: 400 });
     if (typeof round_id !== 'string' || !UUID_RE.test(round_id)) {
         return NextResponse.json({ error: 'Invalid round_id' }, { status: 400 });

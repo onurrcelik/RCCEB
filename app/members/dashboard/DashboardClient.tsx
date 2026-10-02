@@ -119,15 +119,15 @@ function compressImage(file: File, maxPx: number, quality: number): Promise<File
 
 
 const NAV_ITEMS = [
-    { id: 'directory', label: 'Directory', icon: UsersIcon },
+    { id: 'directory', label: 'Members', icon: UsersIcon },
     { id: 'companies', label: 'Companies', icon: BuildingOffice2Icon },
-    { id: 'job-board', label: 'Job Board', icon: BriefcaseIcon },
+    { id: 'events', label: 'Events', icon: CalendarIcon },
+    { id: 'match', label: '1-on-1 Match', icon: ArrowsRightLeftIcon },
     { id: 'marketplace', label: 'Asks & Offers', icon: HandRaisedIcon },
+    { id: 'job-board', label: 'Job Board', icon: BriefcaseIcon },
+    { id: 'links', label: 'Links', icon: LinkIcon },
     { id: 'pitch-decks', label: 'Pitch Decks', icon: PresentationChartBarIcon },
     { id: 'perks', label: 'Perks', icon: GiftIcon },
-    { id: 'match', label: '1-on-1 Match', icon: ArrowsRightLeftIcon },
-    { id: 'links', label: 'Links', icon: LinkIcon },
-    { id: 'events', label: 'Events', icon: CalendarIcon },
     { id: 'referrals', label: 'Refer a Friend', icon: UserPlusIcon },
 ];
 
@@ -560,6 +560,7 @@ function DashboardContent() {
     type PartnerHistoryEntry = { round_id: string; week_of: string; partner: Member; confirmed_met: boolean | null };
     type MatchData = {
         eligible?: boolean;
+        autoOptIn?: boolean;
         currentRound: { id: string; week_of: string; status: string } | null;
         myResponse: { opted_in: boolean | null; confirmed_met: boolean | null } | null;
         myCurrentMatch: { id: string; name: string; email: string; phone?: string; bio?: string; linkedin?: string; github?: string; location?: string; avatar_url?: string; member_types?: string; twitter?: string; instagram?: string; favorite_resource?: string; occupation_link?: string; graduation_year?: number | null; categories?: string[]; is_past_member?: boolean; created_at?: string } | null;
@@ -593,7 +594,7 @@ function DashboardContent() {
     // Returns whether the server accepted it. Callers that flip local UI state on the back
     // of a submit must check this — a rejected opt-in used to leave the portal claiming
     // the member was in when nothing had been recorded.
-    const submitMatch = async (payload: { round_id: string; opted_in?: boolean; confirmed_met?: boolean }) => {
+    const submitMatch = async (payload: { round_id?: string; opted_in?: boolean; confirmed_met?: boolean; auto_opt_in?: boolean }) => {
         setSubmittingMatch(true);
         setMatchError('');
         try {
@@ -877,7 +878,7 @@ function DashboardContent() {
                     <div className="mb-8">
                         {activeSection === 'directory' && (
                             <>
-                                <h1 className="text-xl font-bold text-white mb-1">Member Directory</h1>
+                                <h1 className="text-xl font-bold text-white mb-1">Members</h1>
                                 <p className="text-zinc-400 text-sm">Founders, executives and investors of the RC community.</p>
                             </>
                         )}
@@ -1131,7 +1132,29 @@ function DashboardContent() {
                                 <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-zinc-700 rounded-2xl p-8 animate-pulse h-48" />
                             ) : !matchEligible ? (
                                 <IneligibleMatchCard />
-                            ) : !matchData?.currentRound ? (
+                            ) : null}
+                            {!loadingMatch && matchEligible && matchData && (
+                                <label className="mb-4 flex items-center justify-between gap-4 bg-zinc-900/60 border border-zinc-700 rounded-2xl px-5 py-4 cursor-pointer">
+                                    <div className="min-w-0">
+                                        <div className="text-white text-sm font-medium">Join every month automatically</div>
+                                        <div className="text-zinc-400 text-xs mt-0.5">
+                                            {matchData.autoOptIn
+                                                ? "You're in each round as soon as it opens. No invitation email, just your match. You can still sit out a single month."
+                                                : 'Skip the monthly invitation and just get your match each month.'}
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        role="switch"
+                                        checked={!!matchData.autoOptIn}
+                                        disabled={submittingMatch}
+                                        onChange={e => submitMatch({ auto_opt_in: e.target.checked })}
+                                        className="peer sr-only"
+                                    />
+                                    <span aria-hidden className="relative h-6 w-11 shrink-0 rounded-full bg-zinc-700 transition-colors peer-checked:bg-gold-400 peer-disabled:opacity-50 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-gold-400" />
+                                </label>
+                            )}
+                            {loadingMatch || !matchEligible ? null : !matchData?.currentRound ? (
                                 <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-zinc-700 rounded-2xl p-10 text-center">
                                     <ArrowsRightLeftIcon className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
                                     <h3 className="text-white font-semibold mb-2">No round this month yet</h3>
@@ -1819,6 +1842,16 @@ function EmailChangeCard({ member, onSave }: { member: SelfMember; onSave: (upda
     );
 }
 
+// A company counts as an investor when someone there joined on the investor pathway or
+// describes their role there as investing (e.g. "Angel investor", "VC partner").
+const INVESTOR_ROLE = /invest|venture|\bvc\b|angel/i;
+
+function isInvestorCompany(company: CompanyDirectoryEntry) {
+    return company.members.some(member =>
+        member.categories?.includes('investor') || (member.role ? INVESTOR_ROLE.test(member.role) : false),
+    );
+}
+
 function CompaniesSection({
     companies,
     loading,
@@ -1832,12 +1865,15 @@ function CompaniesSection({
     onSearch: (value: string) => void;
     onOpen: (company: CompanyDirectoryEntry) => void;
 }) {
+    const [investorsOnly, setInvestorsOnly] = useState(false);
     const query = search.trim().toLowerCase();
     const filtered = companies.filter(company =>
-        !query ||
-        company.name.toLowerCase().includes(query) ||
-        company.website?.toLowerCase().includes(query) ||
-        company.members.some(member => member.name?.toLowerCase().includes(query)),
+        (!investorsOnly || isInvestorCompany(company)) && (
+            !query ||
+            company.name.toLowerCase().includes(query) ||
+            company.website?.toLowerCase().includes(query) ||
+            company.members.some(member => member.name?.toLowerCase().includes(query))
+        ),
     );
 
     return (
@@ -1851,6 +1887,25 @@ function CompaniesSection({
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none focus:border-gold-400/50 text-sm transition-colors"
                 />
             </div>
+            <div className="flex flex-wrap gap-2 mb-6">
+                {[{ value: false, label: 'All companies' }, { value: true, label: 'Investors' }].map(option => {
+                    const selected = investorsOnly === option.value;
+                    return (
+                        <button
+                            key={option.label}
+                            type="button"
+                            onClick={() => setInvestorsOnly(option.value)}
+                            className={`rounded-full border px-3 py-2 md:py-1.5 text-[11px] font-medium transition-all ${
+                                selected
+                                    ? 'border-gold-400 bg-gold-400 text-zinc-950'
+                                    : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500 hover:text-white'
+                            }`}
+                        >
+                            {option.label}
+                        </button>
+                    );
+                })}
+            </div>
             {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -1859,7 +1914,11 @@ function CompaniesSection({
                 </div>
             ) : filtered.length === 0 ? (
                 <div className="text-center py-20 text-zinc-400">
-                    {query ? 'No companies match your search.' : 'No companies yet. Members add theirs when they join.'}
+                    {query
+                        ? 'No companies match your search.'
+                        : investorsOnly
+                            ? 'No investors yet. Companies show here when a member there joined as an investor or invests in their role.'
+                            : 'No companies yet. Members add theirs when they join.'}
                 </div>
             ) : (
                 <>
