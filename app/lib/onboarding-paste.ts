@@ -70,6 +70,26 @@ function parseCompanies(lines: string[]): CompanyDraft[] {
     return companies.slice(0, 8);
 }
 
+// Favorite source is just a name ("Paul Graham's essays"). ChatGPT likes to add why;
+// keep each item's first sentence and drop anything after a dash or colon.
+function namesOnly(text: string): string {
+    const items = text
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line =>
+            line
+                // First sentence only: a period after a word of 3+ letters ends it, so
+                // "Dr. Seuss" survives but "essays. I like…" is cut.
+                .replace(/^(.*?[\p{L}\d'’)"]{3,})[.!?](\s+\S[\s\S]*)?$/u, '$1')
+                .split(/\s+[—–-]\s+|:\s+|,?\s+because\s+|,\s+(?:which|as|since)\s+/i)[0]
+                .replace(/[\s,;.]+$/, '')
+                .trim(),
+        )
+        .filter(Boolean);
+    return items.slice(0, 3).join(', ');
+}
+
 function parseExpertise(text: string): string[] {
     const lower = text.toLowerCase();
     return EXPERTISE_OPTIONS.filter(option => lower.includes(option.toLowerCase()));
@@ -105,7 +125,8 @@ export function parseChatGptReply(reply: string): { fields: ParsedOnboarding; fo
     if (companies.length) fields.companies = companies;
     const education = text('education');
     if (education && !/^none\.?$/i.test(education)) fields.education = education;
-    if (text('favorite_resource')) fields.favorite_resource = text('favorite_resource');
+    const favorite = namesOnly(text('favorite_resource'));
+    if (favorite) fields.favorite_resource = favorite;
     // The WhatsApp intro isn't a form field: it's kept for admins. Bullets inside it are
     // part of the intro, so it's taken as written rather than through tidy().
     const intro = (sections.get('bonus') ?? []).join('\n').replace(/\*\*|__/g, '').replace(/\n{3,}/g, '\n\n').trim();
