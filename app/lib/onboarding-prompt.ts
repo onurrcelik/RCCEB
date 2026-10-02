@@ -1,11 +1,12 @@
 import { EXPERTISE_OPTIONS, categoryLabel } from '@/app/lib/categories';
 
 // The ChatGPT prompt offered on the onboarding page. Pasted into a ChatGPT that already
-// knows the member, it drafts every free-text answer the profile step asks for, under the
-// same headings as the form, so each part can be copied straight into its field. What we
+// knows the member, it drafts every free-text answer the profile step asks for, under fixed
+// numbered headings; the member pastes the whole reply back and app/lib/onboarding-paste.ts
+// sorts it into the fields. What we
 // already know from their application goes in up front so ChatGPT starts from the facts.
 //
-// Keep the numbered sections in step with the onboarding form (app/members/onboarding).
+// Keep the numbered headings in step with the onboarding form and with the parser.
 
 export type OnboardingPromptFacts = {
     name?: string | null;
@@ -29,7 +30,7 @@ How to work with me:
 - Otherwise interview me: ask one question at a time, short and friendly, no more than 7 questions in total. Then write everything in one go.
 - Don't invent facts, numbers, companies or titles. If you're unsure, ask.
 
-Write in English, first person, warm and natural, not corporate. No em dashes, no emojis, no hashtags. Use these exact headings so I can paste each part into the matching field:
+Write in English, first person, warm and natural, not corporate. No em dashes, no emojis, no hashtags. I'll paste your whole reply into the portal, which reads it by these headings, so keep each numbered heading exactly as written:
 
 1. Bio
    2 to 4 sentences (about 60 to 100 words) on who I am and what I've built.

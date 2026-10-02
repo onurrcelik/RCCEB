@@ -11,6 +11,7 @@ import { ExpertisePicker } from '@/app/components/profile/ExpertisePicker';
 import { CompanyFields } from '@/app/components/profile/CompanyFields';
 import { buildOnboardingPrompt } from '@/app/lib/onboarding-prompt';
 import { ChatGptPromptDialog } from './ChatGptPromptDialog';
+import type { ParsedOnboarding } from '@/app/lib/onboarding-paste';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 
 // Newest first, matching the dropdown on rcceb.org/join.
@@ -56,6 +57,7 @@ function OnboardingContent() {
     const [avatarUrl, setAvatarUrl] = useState('');
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [showPrompt, setShowPrompt] = useState(false);
+    const [filledFromChatGpt, setFilledFromChatGpt] = useState(0);
     // Kept apart from `error`: clicking Continue overwrites `error` with the
     // missing-fields line, which used to bury why the upload actually failed.
     const [uploadError, setUploadError] = useState('');
@@ -119,6 +121,24 @@ function OnboardingContent() {
         () => buildOnboardingPrompt({ name: form.name, graduation_year: form.graduation_year, location: form.location, categories: pathways }),
         [form.name, form.graduation_year, form.location, pathways],
     );
+
+    // Puts a pasted ChatGPT reply into the form. Only sections it found are touched, so a
+    // partial reply never wipes what the member already typed.
+    function applyChatGpt(fields: ParsedOnboarding) {
+        setForm(f => ({
+            ...f,
+            bio: fields.bio ?? f.bio,
+            can_help_with: fields.can_help_with ?? f.can_help_with,
+            working_on: fields.working_on ?? f.working_on,
+            education: fields.education ?? f.education,
+            favorite_resource: fields.favorite_resource ?? f.favorite_resource,
+        }));
+        if (fields.expertise) setExpertise(fields.expertise);
+        if (fields.companies) setCompanies(fields.companies);
+        setFilledFromChatGpt(Object.keys(fields).length);
+        setShowPrompt(false);
+        setError('');
+    }
 
     function update(key: string, val: string) {
         setForm(f => ({ ...f, [key]: val }));
@@ -221,7 +241,7 @@ function OnboardingContent() {
 
     return (
         <div className="min-h-screen bg-zinc-950">
-            {showPrompt && step === 1 && <ChatGptPromptDialog prompt={chatGptPrompt} onClose={() => setShowPrompt(false)} />}
+            {showPrompt && step === 1 && <ChatGptPromptDialog prompt={chatGptPrompt} onApply={applyChatGpt} onClose={() => setShowPrompt(false)} />}
             {/* Top bar */}
             <div className="px-4 md:px-12 py-4 pt-[max(1.25rem,env(safe-area-inset-top))] md:pt-8 border-b border-zinc-900">
                 <div className="flex items-center justify-between">
@@ -278,8 +298,14 @@ function OnboardingContent() {
                                 className="mt-3 inline-flex items-center gap-2 rounded-full border border-gold-400/30 bg-gold-400/10 px-3.5 py-1.5 text-xs font-semibold text-gold-200 hover:bg-gold-400/20 transition-colors"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
-                                Let ChatGPT draft it for you
+                                {filledFromChatGpt ? 'Paste a new ChatGPT reply' : 'Let ChatGPT draft it for you'}
                             </button>
+                            {filledFromChatGpt > 0 && (
+                                <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                                    <CheckCircleIcon className="w-5 h-5 shrink-0 text-emerald-400" />
+                                    <span>Filled {filledFromChatGpt} of 7 sections from ChatGPT. Read them over, edit anything, and add your photo before you continue.</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-4">
