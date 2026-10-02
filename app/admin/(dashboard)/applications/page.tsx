@@ -164,7 +164,7 @@ export default function ApplicationsPage() {
         }
     };
 
-    const patchApplicant = async (id: string, body: Record<string, unknown>, busyKey = id) => {
+    const patchApplicant = async (id: string, body: Record<string, unknown>, busyKey = id): Promise<boolean> => {
         setUpdatingId(busyKey);
         try {
             const response = await fetch('/api/admin/applications', {
@@ -175,8 +175,10 @@ export default function ApplicationsPage() {
             if (!response.ok) throw new Error('Update failed');
             setApplicants(prev => prev.map(a => a.id === id ? { ...a, ...body } as Applicant : a));
             setSelectedApplicant(current => current?.id === id ? { ...current, ...body } as Applicant : current);
+            return true;
         } catch {
             setError('Could not save that change. Please try again.');
+            return false;
         } finally {
             setUpdatingId(null);
         }
@@ -228,9 +230,9 @@ export default function ApplicationsPage() {
         }
     };
 
-    const sendMemberInvite = async (applicant: Applicant) => {
+    const sendMemberInvite = async (applicant: Applicant, alreadyConfirmed = false) => {
         const again = applicant.member_id ? ' again' : '';
-        if (!confirm(`Send ${applicant.name} their member portal invite${again}?`)) return;
+        if (!alreadyConfirmed && !confirm(`Send ${applicant.name} their "Welcome to RCCEB" onboarding email${again}?`)) return;
         setSendingMemberInviteId(applicant.id);
         try {
             const response = await fetch('/api/admin/members/invite', {
@@ -241,11 +243,27 @@ export default function ApplicationsPage() {
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.error || 'Failed to send the portal invite');
             setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, member_id: data.memberId } : a));
-            flash(`Portal invite sent to ${applicant.email}`);
+            flash(`Welcome email sent to ${applicant.email}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to send the portal invite');
         } finally {
             setSendingMemberInviteId(null);
+        }
+    };
+
+    // Accepting someone who isn't a member yet sends their "Welcome to RCCEB" onboarding
+    // email straight away, so there's no separate step to forget.
+    const changeAdmission = async (applicant: Applicant, value: string) => {
+        if (value !== 'accepted' || applicant.member_id) {
+            await patchApplicant(applicant.id, { admission_status: value }, `${applicant.id}_admission`);
+            return;
+        }
+        const unverified = applicant.status !== 'rc verified'
+            ? `\n\nNote: they aren't marked RC Verified yet.`
+            : '';
+        if (!confirm(`Accept ${applicant.name}? This emails them their "Welcome to RCCEB" onboarding link right away.${unverified}`)) return;
+        if (await patchApplicant(applicant.id, { admission_status: value }, `${applicant.id}_admission`)) {
+            await sendMemberInvite(applicant, true);
         }
     };
 
@@ -440,8 +458,8 @@ export default function ApplicationsPage() {
                                             <div className="relative inline-block w-28">
                                                 <select
                                                     value={applicant.admission_status || ''}
-                                                    onChange={(e) => patchApplicant(applicant.id, { admission_status: e.target.value }, `${applicant.id}_admission`)}
-                                                    disabled={updatingId === `${applicant.id}_admission`}
+                                                    onChange={(e) => changeAdmission(applicant, e.target.value)}
+                                                    disabled={updatingId === `${applicant.id}_admission` || sendingMemberInviteId === applicant.id}
                                                     className={`w-full appearance-none bg-white border rounded-lg py-1 pl-2.5 pr-7 text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:border-slate-300 transition-all ${admissionStatusConfig(applicant.admission_status).color}`}
                                                 >
                                                     {ADMISSION_STATUS_OPTIONS.map(opt => (
@@ -481,14 +499,14 @@ export default function ApplicationsPage() {
                                                         onClick={() => sendMemberInvite(applicant)}
                                                         disabled={sendingMemberInviteId === applicant.id}
                                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all disabled:opacity-50"
-                                                        title="Send member portal invite"
+                                                        title={applicant.member_id ? 'Send the onboarding email again' : 'Send the onboarding email'}
                                                     >
                                                         {sendingMemberInviteId === applicant.id ? (
                                                             <ArrowPathIcon className="w-3 h-3 animate-spin" />
                                                         ) : (
                                                             <UserPlusIcon className="w-3 h-3" />
                                                         )}
-                                                        Portal
+                                                        {applicant.member_id ? 'Resend' : 'Invite'}
                                                     </button>
                                                 )}
                                                 <button

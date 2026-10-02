@@ -66,9 +66,9 @@ you straight through, so you can log in without Resend. Sign in at `/admin/login
    receives an email about it.
 2. Robert College checks the applicant really graduated. Track it with the Application
    status: **Sent to RC**, then **RC Verified**.
-3. Set Admission to **Accepted**, then click **Portal**. This creates the member, copying
+3. Set Admission to **Accepted** and confirm. That immediately creates the member, copying
    their name, phone, LinkedIn, class year and pathway from the application, and emails
-   them a 30-day onboarding link.
+   them "Welcome to RCCEB" with a 30-day onboarding link. **Resend** sends it again.
 4. They finish their profile and appear in the directory.
 
 You can also add members directly on the Members page and re-send their invite from there.
