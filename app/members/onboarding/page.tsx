@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { ArrowRightIcon, ArrowLeftIcon, UserIcon, AcademicCapIcon, CheckCircleIcon, EnvelopeIcon, UserPlusIcon, CameraIcon, BookOpenIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ArrowLeftIcon, UserIcon, AcademicCapIcon, CheckCircleIcon, EnvelopeIcon, UserPlusIcon, CameraIcon, BookOpenIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { LinkedinIcon } from '@/app/components/ui/BrandIcons';
 import Link from 'next/link';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
@@ -57,7 +57,7 @@ function OnboardingContent() {
     const [uploadError, setUploadError] = useState('');
 
     const [form, setForm] = useState({
-        name: '', phone: '', linkedin: '', graduation_year: '',
+        name: '', phone: '', linkedin: '', graduation_year: '', location: '',
         bio: '', can_help_with: '', working_on: '', education: '',
         favorite_resource: '',
     });
@@ -83,6 +83,7 @@ function OnboardingContent() {
                     phone: m.phone ?? f.phone,
                     linkedin: m.linkedin ?? f.linkedin,
                     graduation_year: m.graduation_year ? String(m.graduation_year) : f.graduation_year,
+                    location: m.location ?? f.location,
                     bio: m.bio ?? f.bio,
                     can_help_with: m.can_help_with ?? f.can_help_with,
                     working_on: m.working_on ?? f.working_on,
@@ -138,6 +139,7 @@ function OnboardingContent() {
         if (!form.phone) missing.push('Phone');
         if (!form.linkedin) missing.push('LinkedIn');
         if (!form.graduation_year) missing.push('RC Graduation Year');
+        if (!form.location.trim()) missing.push('Location');
         if (!form.bio) missing.push('Bio');
         if (!form.can_help_with) missing.push('What I can help with');
         if (!form.working_on) missing.push("What I'm working on");
@@ -162,6 +164,7 @@ function OnboardingContent() {
                     linkedin: form.linkedin,
                     phone: form.phone,
                     graduation_year: form.graduation_year,
+                    location: form.location,
                     can_help_with: form.can_help_with,
                     working_on: form.working_on,
                     expertise,
@@ -360,6 +363,20 @@ function OnboardingContent() {
                                         <option value="">Select your class year</option>
                                         {GRADUATION_YEARS.map(year => <option key={year} value={year}>{year}</option>)}
                                     </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Location *</label>
+                                <div className="relative">
+                                    <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                                    <input
+                                        value={form.location}
+                                        onChange={e => update('location', e.target.value)}
+                                        autoComplete="address-level2"
+                                        placeholder="Istanbul, Turkey"
+                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-gold-400 text-sm transition-colors"
+                                    />
                                 </div>
                             </div>
 

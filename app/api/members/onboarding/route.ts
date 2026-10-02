@@ -10,6 +10,7 @@ function missingProfile(updates: Record<string, unknown> | undefined): string | 
     if (!updates?.name || !updates.bio || !updates.can_help_with || !updates.working_on || !updates.education || !updates.favorite_resource) {
         return 'Bio, what you can help with, what you are working on, education, and a favorite source are required';
     }
+    if (!updates.location) return 'Location is required';
     if (!Array.isArray(updates.expertise) || updates.expertise.length === 0) {
         return 'Pick at least one expertise tag';
     }
