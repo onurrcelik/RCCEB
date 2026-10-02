@@ -10,13 +10,14 @@ import {
     UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, HandRaisedIcon, GiftIcon, BuildingOffice2Icon, Bars3Icon, PresentationChartBarIcon
 } from '@heroicons/react/24/outline';
 import { LinkedinIcon, GithubIcon, InstagramIcon, YoutubeIcon } from '@/app/components/ui/BrandIcons';
-import { categoryLabel, classYearLabel, MEMBER_CATEGORIES } from '@/app/lib/categories';
+import { categoryLabel, classYearLabel } from '@/app/lib/categories';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
 import { MemberProfileEditor } from '@/app/components/profile/MemberProfileEditor';
 import { JobBoardSection } from './job-board/JobBoardSection';
 import { MarketplaceSection } from './marketplace/MarketplaceSection';
 import { PitchDecksSection } from './pitch-decks/PitchDecksSection';
 import { PerksSection } from './perks/PerksSection';
+import { DirectoryFilters, EMPTY_DIRECTORY_FILTERS, activeFilterCount, matchesDirectoryFilters, type DirectoryFilterState } from './DirectoryFilters';
 
 type CompanyLink = {
     id?: string;
@@ -537,7 +538,7 @@ function DashboardContent() {
     const [loadingMembers, setLoadingMembers] = useState(true);
     const [search, setSearch] = useState('');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const [directoryFilters, setDirectoryFilters] = useState<DirectoryFilterState>(EMPTY_DIRECTORY_FILTERS);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [linkGroups, setLinkGroups] = useState<LinkGroup[]>([]);
@@ -786,7 +787,7 @@ function DashboardContent() {
     }
 
     const filteredMembers = members.filter(m =>
-        (!categoryFilter || (m.categories ?? []).includes(categoryFilter)) && (
+        matchesDirectoryFilters(m, directoryFilters) && (
             !search ||
             m.name?.toLowerCase().includes(search.toLowerCase()) ||
             m.bio?.toLowerCase().includes(search.toLowerCase()) ||
@@ -962,25 +963,7 @@ function DashboardContent() {
                                     </button>
                                 )}
                             </div>
-                            <div className="flex flex-wrap gap-2 mb-6">
-                                {[{ id: null as string | null, label: 'All members' }, ...MEMBER_CATEGORIES.map(c => ({ id: c.id as string | null, label: c.short }))].map(option => {
-                                    const selected = categoryFilter === option.id;
-                                    return (
-                                        <button
-                                            key={option.id ?? 'all'}
-                                            type="button"
-                                            onClick={() => setCategoryFilter(option.id)}
-                                            className={`rounded-full border px-3 py-2 md:py-1.5 text-[11px] font-medium transition-all ${
-                                                selected
-                                                    ? 'border-gold-400 bg-gold-400 text-zinc-950'
-                                                    : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500 hover:text-white'
-                                            }`}
-                                        >
-                                            {option.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <DirectoryFilters members={members} filters={directoryFilters} onChange={setDirectoryFilters} />
                             {loadingMembers ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {Array.from({ length: 6 }).map((_, i) => (
@@ -989,7 +972,7 @@ function DashboardContent() {
                                 </div>
                             ) : filteredMembers.length === 0 ? (
                                 <div className="text-center py-20 text-zinc-400">
-                                    {search || categoryFilter ? 'No members match your search.' : 'No members yet.'}
+                                    {search || activeFilterCount(directoryFilters) ? 'No members match your search and filters.' : 'No members yet.'}
                                 </div>
                             ) : (
                                 <>
