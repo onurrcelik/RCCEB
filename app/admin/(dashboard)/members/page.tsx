@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowPathIcon, MagnifyingGlassIcon, TrashIcon, PlusCircleIcon, XMarkIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon, ArrowDownTrayIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, ChevronDownIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { LinkedinIcon } from '@/app/components/ui/BrandIcons';
 import { categoryLabel, FIRST_GRADUATION_YEAR, MEMBER_CATEGORIES } from '@/app/lib/categories';
@@ -43,12 +43,41 @@ function parseReferrals(website: string | null): Referral[] {
 const EMPTY_FORM = { name: '', email: '', location: '', linkedin: '', graduation_year: '', categories: [] as string[], onboarding_complete: false };
 
 function CategoryEditor({ value, onChange, disabled }: { value: string[]; onChange: (next: string[]) => void; disabled?: boolean }) {
-    const [open, setOpen] = useState(false);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    // The table sits in an overflow container, so an absolutely positioned menu got
+    // clipped by it. The menu is fixed to the viewport instead, placed under the
+    // button, or above it when there isn't room below.
+    const [menuPos, setMenuPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
+    const open = menuPos !== null;
+
+    function toggle() {
+        if (open) return setMenuPos(null);
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const menuHeight = MEMBER_CATEGORIES.length * 40 + 16;
+        const left = Math.min(rect.left, window.innerWidth - 264);
+        setMenuPos(window.innerHeight - rect.bottom < menuHeight + 8
+            ? { left, bottom: window.innerHeight - rect.top + 4 }
+            : { left, top: rect.bottom + 4 });
+    }
+
+    useEffect(() => {
+        if (!open) return;
+        const close = () => setMenuPos(null);
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', close);
+        return () => {
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
+        };
+    }, [open]);
+
     return (
         <div className="relative">
             <button
+                ref={buttonRef}
                 type="button"
-                onClick={() => setOpen(o => !o)}
+                onClick={toggle}
                 disabled={disabled}
                 className="flex flex-wrap items-center gap-1 min-h-[28px] max-w-[220px] text-left rounded-lg border border-slate-200 bg-white px-2 py-1 hover:border-slate-300 transition-all disabled:opacity-50"
             >
@@ -59,19 +88,22 @@ function CategoryEditor({ value, onChange, disabled }: { value: string[]; onChan
                 )) : <span className="text-[11px] text-slate-400 px-1">Set pathway</span>}
                 <ChevronDownIcon className="w-3 h-3 text-slate-400 ml-auto" />
             </button>
-            {open && (
+            {menuPos && (
                 <>
-                    <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-                    <div className="absolute z-20 mt-1 w-60 rounded-xl border border-slate-200 bg-white shadow-lg p-1.5">
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuPos(null)} />
+                    <div
+                        className="fixed z-50 w-64 rounded-xl border border-slate-200 bg-white shadow-lg p-1.5"
+                        style={{ left: menuPos.left, top: menuPos.top, bottom: menuPos.bottom }}
+                    >
                         {MEMBER_CATEGORIES.map(c => {
                             const checked = value.includes(c.id);
                             return (
-                                <label key={c.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-50 cursor-pointer text-sm text-slate-700">
+                                <label key={c.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-50 cursor-pointer text-sm text-slate-700 whitespace-nowrap">
                                     <input
                                         type="checkbox"
                                         checked={checked}
                                         onChange={() => onChange(checked ? value.filter(v => v !== c.id) : MEMBER_CATEGORIES.map(x => x.id).filter(id => id === c.id || value.includes(id)))}
-                                        className="accent-navy-700"
+                                        className="accent-navy-700 shrink-0"
                                     />
                                     {c.label}
                                 </label>
