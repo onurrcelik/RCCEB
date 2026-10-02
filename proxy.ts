@@ -3,18 +3,26 @@ import { isAdminEmail } from '@/app/lib/admin-auth';
 import { refreshSessionCookie, sessionEmailFromRequest } from '@/app/lib/auth';
 import { query } from '@/app/lib/db';
 
+// Behind www.rcceb.org the request reaches this app through the landing site's rewrite,
+// so request.url carries this deployment's own host. Redirect to the public URL instead,
+// or the visitor would land on *.vercel.app without their rcceb.org cookies.
+function redirectTo(path: string, request: NextRequest) {
+    const base = process.env.NODE_ENV === 'production' && process.env.APP_URL ? process.env.APP_URL : request.url;
+    return NextResponse.redirect(new URL(path, base));
+}
+
 function denyAdmin(request: NextRequest, pathname: string) {
     if (pathname.startsWith('/api/admin')) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return redirectTo('/admin/login', request);
 }
 
 function denyMember(request: NextRequest, pathname: string) {
     if (pathname.startsWith('/api/members')) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return NextResponse.redirect(new URL('/members/login', request.url));
+    return redirectTo('/members/login', request);
 }
 
 type MemberGateRow = {
@@ -25,7 +33,7 @@ type MemberGateRow = {
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    if (pathname === '/') return NextResponse.redirect(new URL('/members/dashboard', request.url));
+    if (pathname === '/') return redirectTo('/members/dashboard', request);
 
     // Admin auth bypass — exact matches only, so a future route created under
     // these prefixes doesn't inherit public access by accident.
@@ -89,7 +97,7 @@ export async function proxy(request: NextRequest) {
 
         if (!member.onboarding_complete && !isOnboardingPath) {
             if (pathname.startsWith('/members')) {
-                return NextResponse.redirect(new URL('/members/onboarding', request.url));
+                return redirectTo('/members/onboarding', request);
             }
             return denyMember(request, pathname);
         }

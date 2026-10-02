@@ -33,6 +33,11 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // The portal is a Next.js "zone" behind www.rcceb.org: the landing site's project
+  // rewrites /members, /admin, /auth and the portal APIs here. A distinct asset prefix
+  // keeps this app's /_next files apart from the landing site's. Next serves
+  // /portal-static/_next/* itself, so the portal's own URL keeps working too.
+  assetPrefix: isDev ? undefined : '/portal-static',
   images: {
     remotePatterns: s3Host ? [{ protocol: 'https', hostname: s3Host }] : [],
   },
