@@ -49,36 +49,29 @@ you straight through, so you can log in without Resend. Sign in at `/admin/login
 
 ## How someone becomes a member
 
-1. They apply at **rcceb.org/join**. That site's own `/api/join` handler forwards the same
-   JSON body to this portal:
+The full flow, with every email, is in `DEVELOPER_GUIDE.md` (section 4). In short:
 
-   ```
-   POST {APP_URL}/api/applications
-   Authorization: Bearer {APPLICATIONS_INTAKE_SECRET}
-   Content-Type: application/json
+1. They apply at **rcceb.org/join**. The site writes its Google Sheet, emails the RC clerks, and
+   forwards the application to this portal (`POST /api/applications`, `Authorization: Bearer
+   {APPLICATIONS_INTAKE_SECRET}`, body carries `externalId` = the sheet's User ID). It appears
+   under **Admin → Applications** as **Sent to RC**, and `NOTIFICATION_EMAIL` is alerted.
+2. An RC clerk clicks **Approve** in the reviewer email. The site updates the sheet and calls
+   `POST /api/applications/rc-decision`; the portal marks the application **RC Verified +
+   Accepted**, creates the member and emails "Welcome to the Bond" with a 30-day onboarding link.
+   Reject marks it **Declined**.
+3. They finish their profile (a ChatGPT prompt can draft it) and appear in the directory.
 
-   { firstName, lastName, graduationYear, linkedIn, phone, email, contactConsent,
-     memberTypes: ["young-entrepreneur" | "experienced-entrepreneur" | "executive" | "investor"],
-     agreedToTerms, agreedToLetterOfIntent }
-   ```
-
-   The application appears under **Admin → Applications**, and `NOTIFICATION_EMAIL`
-   receives an email about it.
-2. Robert College checks the applicant really graduated. Track it with the Application
-   status: **Sent to RC**, then **RC Verified**.
-3. Set Admission to **Accepted** and confirm. That immediately creates the member, copying
-   their name, phone, LinkedIn, class year and pathway from the application, and emails
-   them "Welcome to RCCEB" with a 30-day onboarding link. **Resend** sends it again.
-4. They finish their profile and appear in the directory.
-
-You can also add members directly on the Members page and re-send their invite from there.
+Admins can still do it by hand: Admission → **Accepted**, or **Invite / Resend**, or add a member
+on the Members page.
 
 ## 1-on-1 matching
 
-Rounds are monthly and run by hand from **Admin → Matches**. Nothing is scheduled:
-**Create Round** puts every onboarded member in, **Notify All Members** emails them with a
-way to sit the month out, **Run Match** makes the pairs without emailing anyone, and
-**Send Intro Emails** tells each pair who they got. Only one round can be open at a time.
+Rounds are monthly, opt-in, and run by hand from **Admin → Matches**; nothing is scheduled.
+**Create Round** opens an empty round and emails every onboarded member an invitation with a
+one-click "Count me in" (members can also choose "join every month" and skip the invitation).
+**Remind Members** re-sends only to people who haven't answered. **Run Match** pairs only the
+people who joined, without emailing, and **Send Intro Emails** tells each pair who they got and
+who reaches out first. Only one round can be open at a time.
 
 ## Layout
 

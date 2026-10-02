@@ -29,19 +29,7 @@ The public marketing site is https://www.rcceb.org/. This repo is only the membe
 
 ## People
 
-| Person | Email | Access |
-| --- | --- | --- |
-| Onur Çelik | onur5celik8@gmail.com | Admin. Member row exists and onboarding is **Complete**, so he is visible in the directory. |
-| Eray Erdoğan | eray@reflectstudio.com | Member. Onboarding was **Complete** by 2 October 2026. He is also on the admin allow-list. |
-
-## Links already sent to Eray
-
-Onur sent both links on 1 October 2026. Do not generate replacements unless he says a link failed. Do not put the raw tokens in git.
-
-- Member link: `GET /members/invite?token=…` on the live host. It was tested after the database was opened and returned **307 to `/members/onboarding`**. The invite is reusable until onboarding is complete (mail scanners do not burn it). It lasts 30 days. Stored as a hash in `member_invites`.
-- Admin link: `GET /auth/admin/callback?token=…` on the live host. Single-use. Expires about 7 days after it was created (around 8 October 2026), which is longer than the normal 15-minute code. Stored as a hash in `auth_codes` with `kind = 'admin'`. If Eray lands on the admin login page instead of the dashboard, the token was already used or expired. Issue a new one. Do not curl that URL yourself or you will consume it.
-
-Email works now, so Eray can also request a sign-in link himself from the live login pages if these links fail.
+See `DEVELOPER_GUIDE.md` section 2. Onur and Eray are admins (`ADMIN_EMAILS`). As of 2 October 2026 their member rows (and a test member) were deleted, so **no member is onboarded**; admin access doesn't depend on being a member. The 104 members are the imported WhatsApp community, all with onboarding pending and not yet invited. The links sent to Eray on 1 October (member invite, admin callback) no longer matter: he can request a sign-in link at `/admin/login`.
 
 ## Why the first Vercel deploy showed "This page doesn't exist"
 
@@ -147,7 +135,6 @@ Onur committed the email footer fix and `.gitignore` as `ad80c04` (`resend`). It
 
 ## Do not
 
-- Do not complete or wipe Eray's onboarding for him. He is supposed to go through it.
 - Do not print or commit `.env.local`, AWS keys, `APP_SECRET`, or the invite tokens.
 - Do not redesign desktop.
 - Do not turn Vercel Deployment Protection back on for production.
