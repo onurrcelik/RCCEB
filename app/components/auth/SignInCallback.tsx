@@ -18,6 +18,8 @@ export function SignInCallback({ kind }: { kind: 'member' | 'admin' }) {
         started.current = true;
 
         const token = new URLSearchParams(window.location.search).get('token');
+        // Drop the token from the address bar and history as soon as it's read.
+        window.history.replaceState(null, '', window.location.pathname);
         if (!token) {
             setError('This sign-in link is incomplete. Request a new one.');
             return;
