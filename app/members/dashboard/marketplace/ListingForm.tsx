@@ -70,7 +70,7 @@ export function ListingForm({ defaultType = 'ask', listing, onCancel, onSaved }:
         <form onSubmit={handleSubmit} className="mb-6 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900/80">
             <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
                 <div>
-                    <h2 className="text-sm font-semibold text-white">{listing ? 'Edit post' : 'Post to Asks & Offers'}</h2>
+                    <h2 className="text-sm font-semibold text-white">{listing ? 'Edit post' : <>Post to Asks <span className="font-sans">&amp;</span> Offers</>}</h2>
                     <p className="mt-0.5 text-xs text-zinc-500">Say what you need or can help with, and how members should reach you.</p>
                 </div>
                 <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white">

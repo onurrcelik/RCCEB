@@ -1,5 +1,13 @@
 # Join → portal sync plan — 2 October 2026
 
+## STATUS: DONE (2 Oct 2026)
+
+- **New applications:** rcceb.org/join (repo `rcceb/landingpage`, commit 0d7fcd6, live on www.rcceb.org since 12:42 UTC) forwards every submission to the portal's `POST /api/applications`. `PORTAL_APPLICATIONS_URL` and `PORTAL_INTAKE_SECRET` are set on Vercel project `project-uu3bm`. The landing project is now Git-connected: a push to `main` deploys to production. Commits there must be authored as `rcceb` (Hobby plan).
+- **Duplicates:** `applications.external_id` (the sheet's User ID) with a partial unique index. The intake returns `duplicate: true` on a repeat. Portal commit 2efebc6 is live; checked against prod (201, then 200 duplicate, 401 on a wrong secret).
+- **Old applications:** all 59 sheet rows (19 May – 29 Sep 2026) were imported straight into Aurora with their original dates. Approved → admission `accepted` (53), Rejected → `declined` (2), Pending → blank (4). The sheet's reviewer and date are in `notes`. No emails were sent, and none of these people are invited yet. One applicant appears twice (applied twice).
+- The Google Sheet + Gmail approve/reject flow on the landing site still runs alongside. The portal reads only Aurora.
+- Everything below is history.
+
 Goal: people who apply on rcceb.org/join should show up in the portal automatically. Then, when Onur invites them, onboarding opens with what they already typed (name, phone, LinkedIn, RC year, pathway).
 
 Do not print secrets from `.env.local`. Do not commit this file unless Onur asks.
@@ -47,7 +55,18 @@ Onur asked their team which database the **live** join form writes to. Their rep
 
 **DigitalOcean is shelved.** The DigitalOcean contact said (2 Oct): "benim rcceb.org/join ile ilgili bir bilgim yok" ("I don't know anything about rcceb.org/join"). Those databases belong to a separate project. Onur will ask whoever built rcceb.org where the join form stores its data. Until then, ignore DigitalOcean.
 
-## Chosen plan: the Google Sheet
+## Update 2 Oct: we have the landing site's code (this replaces the Apps Script plan)
+
+- rcceb.org source code: https://github.com/rcceb/landingpage, local copy at `~/Desktop/rcceb-landing`. Downloaded from Yasemin's Vercel project `project-uu3bm` (account `admin-66535438s-projects`, deploys with the CLI, no Git). Next.js 16.1.6, React 19, Tailwind 4, pnpm.
+- `/api/join` writes to the Google Sheet with a service account (`GOOGLE_SHEET_ID`, `GOOGLE_SA_*`) and sends Gmail SMTP mail (`GMAIL_USER`, `GMAIL_APP_PASSWORD`) with HMAC approve/reject links (`REVIEW_SECRET`). `/api/review` writes the decision back to the sheet and sends welcome/rejection emails.
+- Decision: **don't merge the repos yet.** The portal is on React 18 + Tailwind 3 (with zinc remapped to navy), and its `proxy.ts` makes everything members-only.
+- Forwarding replaces the Apps Script:
+  - Branch `forward-to-portal` in rcceb-landing (not committed or pushed): after the sheet write, `/api/join` POSTs to the portal. It's best-effort, sends `externalId` = the sheet's User ID, and needs the env vars `PORTAL_APPLICATIONS_URL` + `PORTAL_INTAKE_SECRET`. Without them it does nothing.
+  - Portal (uncommitted): new column `applications.external_id` with a partial unique index. `insertApplication` does `ON CONFLICT DO NOTHING`, and the intake returns `{ duplicate: true }` with no second email.
+  - **Deploy order matters:** run `npm run db:setup` before deploying the portal, because `APPLICATION_SELECT` now reads `external_id`.
+- Still to do: backfill the existing sheet rows (use the User ID column as `externalId`).
+
+## Earlier plan: the Google Sheet (superseded by the section above)
 
 Applications already land automatically in this sheet:
 https://docs.google.com/spreadsheets/d/1te4bWypslsr2seqYHmja32EPp2VeeY2p61MeDDWxNnk/edit?gid=0#gid=0
@@ -75,6 +94,36 @@ A Google Apps Script bound to the sheet sends each new row to `POST {APP_URL}/ap
 
 - Do not "Publish to web" the sheet as CSV. That makes applicant emails and phone numbers public.
 - Do not add Google API keys or a service account to the portal unless the Apps Script push turns out to be impossible.
+
+## Later: make RC approval → onboarding fully automatic (not started)
+
+Onur's goal (2 Oct): once an applicant is in the portal, nobody should have to click anything. Robert College staff check that the applicant is a real RC graduate. Their approval is recorded in a database automatically. The portal should pick that up and send the onboarding email by itself. Onur will do this later, not now.
+
+**How it works today (manual, in the uncommitted 2 Oct changes):**
+1. The application lands in Admin → Applications (status **Submitted**).
+2. An admin sets the status to **Sent to RC**, then **RC Verified**, by hand.
+3. The admin sets Admission to **Accepted** and confirms. That creates the member and emails "Welcome to RCCEB" with a 30-day onboarding link right away (`changeAdmission` in `app/admin/(dashboard)/applications/page.tsx` → `POST /api/admin/members/invite`). **Resend** / **Invite** send it again.
+
+**What "automatic" means:**
+- RC approves → the application becomes **RC Verified** + **Accepted** → the member is created → the welcome email is sent. No admin step.
+- RC rejects → Admission **Declined**, no email.
+- Admins can still do every step by hand, for edge cases.
+
+**Open questions for Onur (answer before building):**
+1. Where does RC record the approval? The Google Sheet (a column), their own database, or something else? Who owns it, and can we get read access or a webhook?
+2. How is the applicant matched? By email is the simplest. A row id or application id is safer if one exists on both sides.
+3. Should an approval send the email instantly, or should an admin get a short window (e.g. a daily digest) to stop it?
+4. What does a rejection look like on their side, if anything?
+
+**Likely build, depending on the answers:**
+- Move the member-creation + welcome-email code out of `app/api/admin/members/invite/route.ts` into a shared helper (e.g. `inviteApplication(applicationId, baseUrl)` in `app/lib/`). Then the admin button and the automatic path send the exact same email.
+- Add a secret-protected endpoint (like `/api/applications`, which uses `APPLICATIONS_INTAKE_SECRET`), e.g. `POST /api/applications/rc-decision` with `{ email | external_id, decision: 'approved' | 'rejected' }`. On approved: set status `rc verified`, admission `accepted`, call the helper. On rejected: admission `declined`.
+- Make it idempotent: if the application already has a `member_id`, don't email again. A repeated or late webhook must never send a second welcome email.
+- How RC's decision reaches the endpoint:
+  - If it's a sheet column: an Apps Script `onEdit`/`onChange` trigger on that column POSTs to the endpoint (same pattern as section 1 above).
+  - If it's a database we can read: a scheduled job (Vercel cron) that polls for new decisions. Note: the weekly match cron was deliberately removed. A new cron is fine for this, but only this.
+- Log every automatic decision somewhere visible (e.g. the application's notes, or a small `application_events` table), so admins can see "accepted automatically on <date> from RC".
+- Test with a fake applicant against the live portal before turning it on, then delete the test rows.
 
 ## Next steps when Onur is back
 

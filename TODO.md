@@ -4,10 +4,12 @@ Tasks for Claude. Add one line per task under **To do**. Claude moves a task to 
 
 ## To do
 
-- 
+- what is welcome to rcceb onboarding link? we should make the onboarding flawless without admin touch (when the robert college clerk approves that the applicant is actually an rc alumni, it should automatically mark it in the admin dashboard and sign the onboarding link. BUT DONT DO THIS YET, I'LL TELL YOU ABOUT HOW RC CLERK APROVES THEN WE CAN DO IT.)
+
 
 ## Done
 
+- **2 Oct 2026 — Add location to the member portal.** Onboarding now asks for **Location** (required, e.g. "Istanbul, Turkey"), and the server rejects onboarding without it. The directory card and the profile popup show it with a pin under the name, and directory search already matches it. Members who onboarded earlier (you) can add it under Edit profile → Location.
 - **2 Oct 2026 — Add Eray and Oz to "the team".** `NOTIFICATION_EMAIL` is now `onur5celik8@gmail.com,eray@reflectstudio.com,oz.silahtar@gmail.com` locally and on Vercel (production and preview), and production was redeployed so it's live now. All three get the new-application and perk-interest alerts.
 - **2 Oct 2026 — Does accepting send the onboarding email?** It didn't: **Portal** only appeared after you set Admission to Accepted, and was a second click. Now choosing **Accepted** asks you to confirm, then creates the member and sends "Welcome to RCCEB" right away. If they aren't marked RC Verified yet, the confirmation says so. The button is now **Invite** (if the email failed) or **Resend**. Not live until committed and pushed.
 - **2 Oct 2026 — Stay signed in for 30 days.** Already mostly true, with one gap: the sign-in cookie was set once and expired 30 days after sign-in, even for active members. Now every visit renews it for another 30 days, for members and admins. A member is only asked to sign in again after 30 days without visiting.
