@@ -53,7 +53,7 @@ Write in English, first person, warm and natural, not corporate. No em dashes, n
    Degrees and schools after Robert College, e.g. "BSc Economics, Boğaziçi; MBA, INSEAD". Write "None" if there aren't any.
 
 7. Favorite read / video / person / source
-   One or two things I'd recommend to another founder, with a few words on why.
+   Just the name of one or two, nothing else, e.g. "Paul Graham's essays". No explanation.
 
 Bonus, after the 7 sections: my WhatsApp intro for the RCCEB group, in Turkish, 80 to 120 words, warm and natural, in exactly this format:
 

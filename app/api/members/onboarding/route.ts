@@ -49,6 +49,11 @@ export async function POST(request: NextRequest) {
                 [member.id, ...values],
             );
             await saveMemberCompanies(q, member.id, companies);
+            // From the ChatGPT paste, when there was one. Admin-only, so it's written here
+            // rather than through the public profile fields.
+            if (typeof body.whatsapp_intro === 'string' && body.whatsapp_intro.trim()) {
+                await q('UPDATE members SET whatsapp_intro = $1 WHERE id = $2', [body.whatsapp_intro.trim().slice(0, 2000), member.id]);
+            }
         });
     } catch (error) {
         console.error('[onboarding POST] query error:', error);

@@ -4,8 +4,8 @@ import type { CompanyDraft } from '@/app/lib/company-input';
 // Sorts a pasted ChatGPT reply (from the prompt in app/lib/onboarding-prompt.ts) into the
 // onboarding fields. The prompt pins the headings and the company line format, so plain
 // parsing is enough: no model call, nothing leaves the browser. It tolerates the ways
-// ChatGPT dresses headings up (markdown #, **bold**, "1)" instead of "1.") and ignores the
-// Turkish WhatsApp intro at the end.
+// ChatGPT dresses headings up (markdown #, **bold**, "1)" instead of "1.") and keeps the
+// Turkish WhatsApp intro at the end separately, for admins.
 
 export type ParsedOnboarding = {
     bio?: string;
@@ -15,6 +15,7 @@ export type ParsedOnboarding = {
     companies?: CompanyDraft[];
     education?: string;
     favorite_resource?: string;
+    whatsapp_intro?: string;
 };
 
 type SectionKey = 'bio' | 'can_help_with' | 'working_on' | 'expertise' | 'companies' | 'education' | 'favorite_resource' | 'bonus';
@@ -85,10 +86,11 @@ export function parseChatGptReply(reply: string): { fields: ParsedOnboarding; fo
             if (!sections.has(heading)) sections.set(heading, []);
             // "1. Bio: I'm a founder…" puts the answer on the heading line itself.
             const inline = cleanLine(line).split(/:\s+/).slice(1).join(': ').trim();
-            if (inline) sections.get(heading)!.push(inline);
+            // The bonus heading's own label ("Bonus: WhatsApp intro") isn't part of the intro.
+            if (inline && heading !== 'bonus') sections.get(heading)!.push(inline);
             continue;
         }
-        if (current && current !== 'bonus') sections.get(current)!.push(line);
+        if (current) sections.get(current)!.push(line);
     }
 
     const fields: ParsedOnboarding = {};
@@ -104,6 +106,11 @@ export function parseChatGptReply(reply: string): { fields: ParsedOnboarding; fo
     const education = text('education');
     if (education && !/^none\.?$/i.test(education)) fields.education = education;
     if (text('favorite_resource')) fields.favorite_resource = text('favorite_resource');
+    // The WhatsApp intro isn't a form field: it's kept for admins. Bullets inside it are
+    // part of the intro, so it's taken as written rather than through tidy().
+    const intro = (sections.get('bonus') ?? []).join('\n').replace(/\*\*|__/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    if (intro) fields.whatsapp_intro = intro.slice(0, 2000);
 
-    return { fields, found: Object.keys(fields).length };
+    // `found` counts only the profile sections the form shows.
+    return { fields, found: Object.keys(fields).filter(key => key !== 'whatsapp_intro').length };
 }

@@ -11,6 +11,7 @@ import { ExpertisePicker } from '@/app/components/profile/ExpertisePicker';
 import { CompanyFields } from '@/app/components/profile/CompanyFields';
 import { buildOnboardingPrompt } from '@/app/lib/onboarding-prompt';
 import { ChatGptPromptDialog } from './ChatGptPromptDialog';
+import { MissingFieldsDialog } from './MissingFieldsDialog';
 import type { ParsedOnboarding } from '@/app/lib/onboarding-paste';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 
@@ -49,6 +50,7 @@ function OnboardingContent() {
     const [saving, setSaving] = useState(false);
     const [savingReferrals, setSavingReferrals] = useState(false);
     const [error, setError] = useState('');
+    const [missingFields, setMissingFields] = useState<string[]>([]);
     const [expertise, setExpertise] = useState<string[]>([]);
     const [pathways, setPathways] = useState<string[]>([]);
     const [companies, setCompanies] = useState<CompanyDraft[]>([{ ...EMPTY_COMPANY }]);
@@ -58,6 +60,7 @@ function OnboardingContent() {
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [showPrompt, setShowPrompt] = useState(false);
     const [filledFromChatGpt, setFilledFromChatGpt] = useState(0);
+    const [whatsappIntro, setWhatsappIntro] = useState('');
     // Kept apart from `error`: clicking Continue overwrites `error` with the
     // missing-fields line, which used to bury why the upload actually failed.
     const [uploadError, setUploadError] = useState('');
@@ -113,7 +116,8 @@ function OnboardingContent() {
                 const seenKey = `rcceb-onboarding-prompt-seen:${m.email ?? ''}`;
                 let seen = false;
                 try { seen = localStorage.getItem(seenKey) === '1'; localStorage.setItem(seenKey, '1'); } catch { /* storage blocked */ }
-                if (!seen && !m.bio) setShowPrompt(true);
+                // A short pause first, so they land on the page before being asked.
+                if (!seen && !m.bio) setTimeout(() => setShowPrompt(true), 5000);
             });
     }, []);
 
@@ -135,6 +139,7 @@ function OnboardingContent() {
         }));
         if (fields.expertise) setExpertise(fields.expertise);
         if (fields.companies) setCompanies(fields.companies);
+        if (fields.whatsapp_intro) setWhatsappIntro(fields.whatsapp_intro);
         setFilledFromChatGpt(Object.keys(fields).length);
         setShowPrompt(false);
         setError('');
@@ -188,7 +193,8 @@ function OnboardingContent() {
         if (!form.education) missing.push('Education after RC');
         if (!form.favorite_resource) missing.push('Favorite Read / Video / Person / Source');
         if (missing.length > 0) {
-            setError(`Please complete: ${missing.join(', ')}`);
+            setError('');
+            setMissingFields(missing);
             return;
         }
         setSaving(true);
@@ -210,6 +216,7 @@ function OnboardingContent() {
                     education: form.education,
                     favorite_resource: form.favorite_resource,
                     companies,
+                    whatsapp_intro: whatsappIntro || undefined,
                 }),
             });
             const data = await res.json();
@@ -520,6 +527,10 @@ function OnboardingContent() {
                         </div>
 
                         {error && <p className="mt-4 text-red-400 text-sm">{error}</p>}
+
+                        {missingFields.length > 0 && (
+                            <MissingFieldsDialog fields={missingFields} onClose={() => setMissingFields([])} />
+                        )}
 
                         <button
                             onClick={handleSaveProfile}

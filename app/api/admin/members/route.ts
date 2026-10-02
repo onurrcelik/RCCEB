@@ -4,7 +4,7 @@ import { isValidEmail } from '@/app/lib/request-security';
 import { verifyAdminSession } from '@/app/lib/admin-auth';
 import { isValidGraduationYear, normalizeCategories } from '@/app/lib/categories';
 
-const MEMBER_SELECT = 'id, name, email, location, graduation_year, categories, is_past_member, onboarding_complete, created_at, linkedin, website';
+const MEMBER_SELECT = 'id, name, email, location, graduation_year, categories, is_past_member, onboarding_complete, created_at, linkedin, website, whatsapp_intro';
 
 // GET /api/admin/members — list all members
 export async function GET(request: NextRequest) {

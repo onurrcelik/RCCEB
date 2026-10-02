@@ -335,6 +335,9 @@ ALTER TABLE marketplace_subscriptions ENABLE ROW LEVEL SECURITY;
 -- Members who chose "join every month": each new round puts them in straight away, and
 -- they skip the monthly invitation. They can still sit out a single month.
 ALTER TABLE members ADD COLUMN IF NOT EXISTS match_auto_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+-- The Turkish WhatsApp group intro ChatGPT drafts during onboarding (the "Bonus" part of
+-- the onboarding prompt). Admin-only: never in the directory or a member API response.
+ALTER TABLE members ADD COLUMN IF NOT EXISTS whatsapp_intro TEXT;
 
 CREATE TABLE IF NOT EXISTS match_rounds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
