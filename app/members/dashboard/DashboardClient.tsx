@@ -895,7 +895,8 @@ function DashboardContent() {
                         )}
                         {activeSection === 'marketplace' && (
                             <>
-                                <h1 className="text-xl font-bold text-white mb-1">Asks &amp; Offers</h1>
+                                {/* Playfair's ampersand is a decorative swash, so the & is set in Inter. */}
+                                <h1 className="text-xl font-bold text-white mb-1">Asks <span className="font-sans">&amp;</span> Offers</h1>
                                 <p className="text-zinc-400 text-sm">Ask for what you need, offer what you can help with — members contact each other directly.</p>
                             </>
                         )}
@@ -1216,7 +1217,7 @@ function DashboardContent() {
                                                     <CheckCircleIcon className="w-5 h-5 text-emerald-400 shrink-0" />
                                                     <div>
                                                         <div className="text-emerald-300 text-sm font-medium">You&apos;re in for this month</div>
-                                                        <div className="text-emerald-500/70 text-xs mt-0.5">Everyone joins by default — we&apos;ll email you your match when the round runs.</div>
+                                                        <div className="text-emerald-500/70 text-xs mt-0.5">We&apos;ll email you your match when the round runs, including who reaches out first.</div>
                                                     </div>
                                                 </div>
                                                 <button

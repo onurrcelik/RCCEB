@@ -4,8 +4,9 @@ import { MATCH_POOL_SELECT, isMatchEligible, type MatchPoolSource } from '@/app/
 import { BRAND } from '@/app/lib/brand';
 import { pendingMetAsks, renderMetAskEmail } from '@/app/lib/match-confirm';
 import { escapeHtml } from '@/app/lib/html-escape';
+import { buildMatchJoinUrl } from '@/app/lib/match-join';
 
-// Opening a monthly 1-on-1 round: who takes part, creating the round, and the heads-up
+// Opening a monthly 1-on-1 round: who is invited, creating the round, and the invitation
 // email. Rounds are opened by hand from Admin → Matches; nothing runs on a schedule.
 
 // The members taking part in the monthly 1-on-1s (see app/lib/categories.ts). Anyone outside
@@ -38,64 +39,67 @@ export function roundDate(now = new Date()) {
     return now.toISOString().split('T')[0];
 }
 
-// Opens a round and puts the whole pool in it. Sitting out is an explicit opt-out on the
-// portal for that month, not something a member has to remember to opt into.
+// Opens an empty round. Joining is opt-in each month: nobody is in until they say yes,
+// from the invitation email's "Count me in" button or from the portal.
 export async function createMatchRound() {
-    let round;
     try {
-        ({ rows: [round] } = await query(
+        const { rows: [round] } = await query(
             "INSERT INTO match_rounds (week_of, status) VALUES ($1, 'open') RETURNING *",
             [roundDate()],
-        ));
-    } catch {
-        return { round: null, seeded: 0 };
-    }
-    if (!round) return { round: null, seeded: 0 };
-
-    const pool = await loadMatchPool();
-    if (pool.uniqueIds.length > 0) {
-        await query(
-            `INSERT INTO match_responses (round_id, member_id, opted_in) VALUES ${pool.uniqueIds.map((_, i) => `($1, $${i + 2}, true)`).join(', ')}`,
-            [round.id, ...pool.uniqueIds],
         );
+        return { round: round ?? null };
+    } catch {
+        return { round: null };
     }
-
-    return { round, seeded: pool.uniqueIds.length };
 }
 
-// Tells the pool the round is open. Everyone in it is already opted in, so this is a
-// heads-up with a way out rather than an invitation. Members outside the pool never get it.
+// How the monthly 1-on-1s work, said once in the invitation so a member knows what they're
+// signing up for before they tap the button.
+const HOW_IT_WORKS = [
+    "Say yes below, and we'll pair you with another RCCEB member at random, someone you haven't been matched with before whenever possible.",
+    'You get one email with your match: who they are, how to reach them, and which one of you reaches out first.',
+    "The person reaching out sends the first message and you set up a 30-minute conversation together, by call, video or over coffee, sometime this month.",
+    "Only members who join are matched. Can't make it this month? Just ignore this email.",
+];
+
+// Invites the pool to this month's round. Anyone who has already answered (in or out) is
+// skipped, so the admin can send it again as a reminder without bothering people twice.
 //
 // It also carries last month's "did you meet?" question for anyone whose pair still has no
 // answer on it. A new round opening is the right moment to ask — the month it's about has
 // just ended — and this email was already going to land in their inbox, so the question
 // costs the member one tap and costs us no extra send. The round opened moments ago has no
 // matches in it yet, so pendingMetAsks lands on last month's round without being told to.
-export async function notifyRoundMembers(baseUrl: string) {
+export async function notifyRoundMembers(roundId: string) {
     const pool = await loadMatchPool();
     const { rows: members } = await query<{ id: string; name: string | null; email: string }>(
-        'SELECT id, name, email FROM members WHERE id = ANY($1) AND email IS NOT NULL',
-        [pool.uniqueIds],
+        `SELECT id, name, email FROM members
+         WHERE id = ANY($1) AND email IS NOT NULL
+           AND NOT EXISTS (
+               SELECT 1 FROM match_responses r
+               WHERE r.round_id = $2 AND r.member_id = members.id AND r.opted_in IS NOT NULL
+           )`,
+        [pool.uniqueIds, roundId],
     );
     if (members.length === 0) return { sent: 0, failed: 0 };
 
-    const optOutLink = `${baseUrl}/members/dashboard?section=match`;
     const asks = await pendingMetAsks(members.map(member => member.id));
+    const month = new Date().toLocaleDateString('en-US', { month: 'long', timeZone: 'Europe/Istanbul' });
 
     let sent = 0;
     let failed = 0;
 
     for (const member of members) {
-        if (!member.email) { failed++; continue; }
-        const first = (member.name || 'there').split(' ')[0];
+        const first = escapeHtml((member.name || 'there').split(' ')[0]);
         const ask = asks.get(member.id);
         const askBlock = ask ? renderMetAskEmail(ask, escapeHtml) : null;
+        const joinLink = buildMatchJoinUrl(roundId, member.id);
         try {
             await sendResendEmail({
                 to: member.email,
-                subject: "You're in this month's 1-on-1 round",
-                text: `Hey ${first},\n\n${askBlock ? `${askBlock.text}\n\n` : ''}This month's ${BRAND.shortName} 1-on-1 round is open and you're in — we'll email you your match once the round runs.\n\nCan't make a 30-min conversation this month? Head to the portal and opt out before matches go out. No need to do anything if you're in.\n\n${optOutLink}`,
-                html: `<p>Hey ${first},</p>${askBlock ? askBlock.html : ''}<p>This month's <strong>${BRAND.shortName} 1-on-1 round</strong> is open and you're in — we'll email you your match once the round runs.</p><p>Can't make a 30-min conversation this month? Head to the portal and opt out before matches go out. No need to do anything if you're in.</p><p><a href="${optOutLink}" style="display:inline-block;padding:10px 20px;background:${BRAND.colors.brandNavy};color:white;border-radius:8px;text-decoration:none;font-weight:600;">Sit this month out →</a></p>`,
+                subject: `Join ${month}'s ${BRAND.shortName} 1-on-1?`,
+                text: `Hey ${first},\n\n${askBlock ? `${askBlock.text}\n\n` : ''}${month}'s ${BRAND.shortName} 1-on-1 round is open. Want to meet another member this month?\n\nHow it works:\n${HOW_IT_WORKS.map(line => `- ${line}`).join('\n')}\n\nCount me in: ${joinLink}`,
+                html: `<p>Hey ${first},</p>${askBlock ? askBlock.html : ''}<p><strong>${month}'s ${BRAND.shortName} 1-on-1 round</strong> is open. Want to meet another member this month?</p><p style="margin:0 0 6px;font-weight:600">How it works</p><ul style="margin:0 0 20px;padding-left:20px;line-height:1.6">${HOW_IT_WORKS.map(line => `<li>${line}</li>`).join('')}</ul><p><a href="${joinLink}" style="display:inline-block;padding:12px 24px;background:${BRAND.colors.brandNavy};color:white;border-radius:8px;text-decoration:none;font-weight:600;">Count me in →</a></p>`,
                 category: 'marketing',
             });
             sent++;

@@ -285,6 +285,8 @@ export default function MatchesPage() {
     const hasPendingEmails = currentRound?.matches.some(m => !m.email_sent) && (currentRound?.matches.length ?? 0) > 0;
 
     const createRound = async () => {
+        const month = new Date().toLocaleDateString('en-US', { month: 'long' });
+        if (!window.confirm(`Open ${month}'s 1-on-1 round and email every onboarded member an invitation?\n\nThe email explains how 1-on-1s work and has a "Count me in" button. Only members who join are matched.`)) return;
         setCreating(true);
         try {
             const res = await fetch('/api/admin/matches', {
@@ -294,7 +296,8 @@ export default function MatchesPage() {
             });
             const data = await res.json();
             if (!res.ok) { flash(data.error || 'Failed', false); return; }
-            flash('Round created — everyone in the pool is opted in. Notify them so anyone who can\'t make it can opt out.', true);
+            const failNote = data.failed ? ` (${data.failed} failed)` : '';
+            flash(`Round opened. Invitation sent to ${data.sent} members${failNote}. They appear under Opted in as they join.`, !data.failed);
             await fetchRounds();
         } finally {
             setCreating(false);
@@ -454,7 +457,7 @@ export default function MatchesPage() {
     };
 
     const notifyAllMembers = async (roundId: string) => {
-        if (!window.confirm('Email everyone in the 1-on-1 pool that the round is open and they are in, with a link to opt out? Past members and anyone still onboarding are skipped.')) return;
+        if (!window.confirm('Send the invitation again to members who haven\'t answered yet? Anyone who already joined or said not this month is skipped.')) return;
         setNotifying(true);
         try {
             const res = await fetch('/api/admin/matches', {
@@ -465,7 +468,7 @@ export default function MatchesPage() {
             const data = await res.json();
             if (!res.ok) { flash(data.error || 'Failed to send notifications', false); return; }
             const failNote = data.failed ? ` (${data.failed} failed)` : '';
-            flash(`Notified ${data.sent} members.${failNote}`, !data.failed);
+            flash(`Reminder sent to ${data.sent} members.${failNote}`, !data.failed);
         } finally {
             setNotifying(false);
         }
@@ -574,7 +577,7 @@ export default function MatchesPage() {
                                 className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all text-[11px] font-bold uppercase tracking-widest disabled:opacity-50 shadow-sm"
                             >
                                 {notifying ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <EnvelopeIcon className="w-3.5 h-3.5" />}
-                                Notify All Members
+                                Remind Members
                             </button>
                         )}
                         {hasOpenRound && optIns.length >= 2 && (

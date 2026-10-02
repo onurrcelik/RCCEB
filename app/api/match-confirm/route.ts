@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
 
     if (feedbackMet !== null) {
         return page('Thanks', `<h1>Thanks — that helps</h1>
-<p>${feedbackMet ? 'Glad you two got to talk.' : "Noted. You're in this month's round either way."}</p>`);
+<p>${feedbackMet ? 'Glad you two got to talk.' : "Noted, thanks for telling us."}</p>`);
     }
 
     const met = params.answer === 'yes';

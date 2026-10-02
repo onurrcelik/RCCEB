@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/app/lib/db';
 import { sendResendEmail } from '@/app/lib/member-auth';
-import { getBaseUrl } from '@/app/lib/site-url';
 import { verifyAdminSession } from '@/app/lib/admin-auth';
 import { createMatchRound, loadMatchPool, notifyRoundMembers } from '@/app/lib/matching';
 import { pendingMetAsks, renderMetAskEmail } from '@/app/lib/match-confirm';
@@ -172,7 +171,6 @@ export async function POST(request: NextRequest) {
     }
     const body = await request.json();
     const { action } = body;
-    const baseUrl = getBaseUrl(request);
 
     // ── Create round ───────────────────────────────────────────────────
     if (action === 'create_round') {
@@ -182,9 +180,11 @@ export async function POST(request: NextRequest) {
         if (openRounds[0]) {
             return NextResponse.json({ error: 'A round is already open. Run the match or delete that round first.' }, { status: 400 });
         }
-        const { round, seeded } = await createMatchRound();
+        const { round } = await createMatchRound();
         if (!round) return NextResponse.json({ error: 'Failed to create round' }, { status: 500 });
-        return NextResponse.json({ ok: true, round, seeded });
+        // The round starts empty, so the invitation is what fills it: send it right away.
+        const { sent, failed } = await notifyRoundMembers(String(round.id));
+        return NextResponse.json({ ok: true, round, sent, failed });
     }
 
     // ── Run match (pairs only, no emails) ─────────────────────────────
@@ -281,8 +281,9 @@ export async function POST(request: NextRequest) {
                 const selfIsOpener = match.opener_member_id === self.id;
                 const otherFirst = other.name.split(' ')[0];
                 const outreachLine = selfIsOpener
-                    ? `👋 It's your responsibility to reach out to ${otherFirst}. (Who goes first is randomly chosen.)`
-                    : `📬 It's ${otherFirst}'s responsibility to reach out to you! (Who goes first is randomly chosen.)`;
+                    ? `👋 You're reaching out. It's your responsibility to message ${otherFirst} first and set up a time.`
+                    : `📬 ${otherFirst} is reaching out. It's ${otherFirst}'s responsibility to message you first, so keep an eye out.`;
+                const outreachNote = 'Who reaches out first is picked at random for each pair.';
                 const lines = [
                     `Name: ${other.name}`,
                     other.bio && `What they do: ${other.bio}`,
@@ -295,9 +296,11 @@ export async function POST(request: NextRequest) {
                 try {
                     await sendResendEmail({
                         to: self.email,
-                        subject: `Your RCCEB 1-on-1 this month: ${other.name}`,
-                        text: `Hey ${first},\n\nYou've been matched with ${other.name} for your 30-min 1-on-1 this month!\n\n${outreachLine}\n\n${lines}${askBlock ? `\n\n—\n\n${askBlock.text}` : ''}`,
-                        html: `<p>Hey ${first},</p><p>You've been matched with <strong>${other.name}</strong> for your 30-min 1-on-1 this month!</p><p style="background:${selfIsOpener ? '#f3ead8' : '#f4f4f5'};padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;color:${selfIsOpener ? '#4a3710' : '#3f3f46'}">${outreachLine}</p><pre style="background:#f5f5f5;padding:14px;border-radius:8px;font-family:sans-serif;font-size:14px;line-height:1.6">${lines}</pre>${askBlock ? askBlock.html : ''}`,
+                        subject: selfIsOpener
+                            ? `Your RCCEB 1-on-1 this month: you reach out to ${other.name}`
+                            : `Your RCCEB 1-on-1 this month: ${other.name} will reach out to you`,
+                        text: `Hey ${first},\n\nYou've been matched with ${other.name} for your 30-min 1-on-1 this month!\n\n${outreachLine}\n${outreachNote}\n\n${lines}${askBlock ? `\n\n—\n\n${askBlock.text}` : ''}`,
+                        html: `<p>Hey ${first},</p><p>You've been matched with <strong>${other.name}</strong> for your 30-min 1-on-1 this month!</p><p style="background:${selfIsOpener ? '#f3ead8' : '#f4f4f5'};padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;color:${selfIsOpener ? '#4a3710' : '#3f3f46'}">${outreachLine}<br><span style="font-weight:400;font-size:12px">${outreachNote}</span></p><pre style="background:#f5f5f5;padding:14px;border-radius:8px;font-family:sans-serif;font-size:14px;line-height:1.6">${lines}</pre>${askBlock ? askBlock.html : ''}`,
                         category: 'marketing',
                     });
                     sent++;
@@ -325,7 +328,7 @@ export async function POST(request: NextRequest) {
         const { rows: roundRows } = await query<{ id: string }>('SELECT id FROM match_rounds WHERE id = $1', [round_id]);
         if (!roundRows[0]) return NextResponse.json({ error: 'Round not found' }, { status: 404 });
 
-        const { sent, failed } = await notifyRoundMembers(baseUrl);
+        const { sent, failed } = await notifyRoundMembers(round_id);
         return NextResponse.json({ ok: true, sent, failed });
     }
 
