@@ -82,7 +82,7 @@ function namesOnly(text: string): string {
                 // First sentence only: a period after a word of 3+ letters ends it, so
                 // "Dr. Seuss" survives but "essays. I like…" is cut.
                 .replace(/^(.*?[\p{L}\d'’)"]{3,})[.!?](\s+\S[\s\S]*)?$/u, '$1')
-                .split(/\s+[—–-]\s+|:\s+|,?\s+because\s+|,\s+(?:which|as|since)\s+/i)[0]
+                .split(/\s+[—–-]\s+|:\s+|,?\s+because\s+|,\s+(?:which|as|since|for|to)\s+/i)[0]
                 .replace(/[\s,;.]+$/, '')
                 .trim(),
         )
