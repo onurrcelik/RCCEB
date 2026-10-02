@@ -4,7 +4,7 @@ Tasks for Claude. Add one line per task under **To do**. Claude moves a task to 
 
 ## To do
 
-- **WhatsApp step (waiting on Onur):** after onboarding, add the member to the RCCEB WhatsApp group and post their intro (`members.whatsapp_intro`, or one written for manual-fill members). Being built in a separate repo; see `WHATSAPP_PLAN.md`. Don't build it here until Onur says so.
+- **WhatsApp step (waiting on Onur):** after onboarding, add the member to the RCCEB WhatsApp group and post their intro (`members.whatsapp_intro`, or one written for manual-fill members). Being built in a separate repo; see `docs/whatsapp-plan.md`. Don't build it here until Onur says so.
 
 ## Done
 

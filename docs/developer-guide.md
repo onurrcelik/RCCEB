@@ -4,12 +4,14 @@ Written 2 October 2026, at the end of the build session that took the portal fro
 
 | Read this | For |
 | --- | --- |
-| **`DEPLOYMENT.md`** | How the two apps deploy together on one domain. **Read before shipping anything.** |
-| `SESSION_HANDOFF.md` | Earlier notes: env vars, email setup, product behavior, auth map, "do not" list. |
-| `WHATSAPP_PLAN.md` | The next step in the membership flow (being built in another repo). |
-| `JOIN_SYNC_PLAN.md` | History: how rcceb.org/join got connected to the portal. |
-| `TODO.md` | Open tasks, and what was done and when. |
-| `README.md` | Setup and layout. |
+| [deployment.md](deployment.md) | How the two apps deploy together on one domain. **Read before shipping anything.** |
+| [architecture.md](architecture.md) | How the portal works: database, auth, onboarding, matching, UI conventions. |
+| [email.md](email.md) | Resend setup and how mail is sent. |
+| [changelog.md](changelog.md) | What changed and why. |
+| [whatsapp-plan.md](whatsapp-plan.md) | The next step in the membership flow (being built in another repo). |
+| [history/join-sync.md](history/join-sync.md) | Archive: how rcceb.org/join got connected to the portal. |
+| [`../TODO.md`](../TODO.md) | Open tasks, and what was done and when. |
+| [`../README.md`](../README.md) | Setup and layout. |
 
 ## 1. What RCCEB is
 
@@ -38,7 +40,7 @@ Two web apps share one domain:
 | What | Where | Notes |
 | --- | --- | --- |
 | Portal hosting | Vercel account `onur5celik8-8068s-projects` (Hobby), project `rcceb` | Git-connected. Push to `main` deploys. |
-| Landing hosting | Vercel account `admin-66535438s-projects` (Hobby, the **admin@rcceb.org** account), project `project-uu3bm` | Git-connected since 2 Oct. **Commits must be authored as `rcceb`** (see `DEPLOYMENT.md`). The domain www.rcceb.org is attached here. |
+| Landing hosting | Vercel account `admin-66535438s-projects` (Hobby, the **admin@rcceb.org** account), project `project-uu3bm` | Git-connected since 2 Oct. **Commits must be authored as `rcceb`** (see [deployment.md](deployment.md)). The domain www.rcceb.org is attached here. |
 | Database | AWS Aurora PostgreSQL, `eu-central-1` (cluster `rcceb-db`) | Port 5432 is open to `0.0.0.0/0` on purpose, because Vercel Hobby has no fixed IP. The password is the gate. **Local dev uses this same production database.** |
 | Photos | S3 bucket `rcceb-uploads` (`avatars/`, `events/`) | The portal's IAM user can **write but not delete**, so deleting a member leaves their photo behind (harmless). |
 | Email | Resend (free plan), logged in as admin@rcceb.org, team `rcceb`, domain `rcceb.org` verified | The portal calls `https://api.resend.com/emails` with `fetch`. The previous developer's older Resend key ("MagicLink Mails") still exists; leave it unless Onur asks. |
@@ -48,7 +50,7 @@ Two web apps share one domain:
 | admin@rcceb.org Google account | Her 2FA is tied to **Yasemin's phone**. She offered to hand it over. | Do this early: if she becomes unreachable you lose access to Gmail, Sheets and the landing Vercel account. |
 | DigitalOcean | Another team's databases (`rcceb-dev-pg17`, `rcceb-preview-pg17`) | **Unrelated to this portal.** They're another project's test data (140 of 145 emails are `@example.invalid`). We looked and shelved them. Ignore. |
 
-Secrets live in `.env.local` (both repos, gitignored) and in the two Vercel projects. Names are listed in `SESSION_HANDOFF.md` and `DEPLOYMENT.md`. **Never print or commit values.** On the landing project, `ADMIN_EMAILS` and several others are **Sensitive** in Vercel: they can be overwritten but never read back, and an "empty" box when editing is normal. Do not rotate `REVIEW_SECRET`: that would break every Approve/Reject button already sitting in clerks' inboxes.
+Secrets live in `.env.local` (both repos, gitignored) and in the two Vercel projects. Names are listed in [deployment.md](deployment.md) and `.env.example`. **Never print or commit values.** On the landing project, `ADMIN_EMAILS` and several others are **Sensitive** in Vercel: they can be overwritten but never read back, and an "empty" box when editing is normal. Do not rotate `REVIEW_SECRET`: that would break every Approve/Reject button already sitting in clerks' inboxes.
 
 ## 4. How a person becomes a member (live flow)
 
@@ -57,7 +59,7 @@ Secrets live in `.env.local` (both repos, gitignored) and in the two Vercel proj
 3. **RC clerks verify.** Each gets an email with their own signed Approve/Reject buttons.
 4. **A clerk clicks Approve** → landing `/api/review` updates the sheet, then POSTs to the portal's `/api/applications/rc-decision`. The portal marks the application **RC Verified + Accepted**, creates the member (copying name, phone, LinkedIn, location, class year, role) and sends the **"Welcome to the Bond"** onboarding email with a 30-day personal link. Reject → **Declined**, and the landing site sends the rejection email. If the portal can't be reached, the landing site falls back to its old WhatsApp welcome email. Repeat clicks never send twice.
 5. **Onboarding** (`/members/onboarding`), pre-filled. After 5 seconds a popup offers a **personal ChatGPT prompt** (it includes their name, year, city, role). They paste ChatGPT's whole reply and **Fill my profile** sorts it into the form: bio, what I can help with, what I'm working on, expertise, companies (website required), education, favorite source (name only). It also keeps their Turkish **WhatsApp intro** in `members.whatsapp_intro` (admin-only, shown behind a WhatsApp icon in Admin → Members). The parser (`app/lib/onboarding-paste.ts`) is plain code, no AI call, and tolerates markdown and a heading-less intro.
-6. **WhatsApp group step:** *not built here*. See `WHATSAPP_PLAN.md`.
+6. **WhatsApp group step:** *not built here*. See [whatsapp-plan.md](whatsapp-plan.md).
 
 Admins can always do the manual route: Admin → Applications → **Accepted / Invite / Resend**, or Members → add a member. Both use the same shared helper (`app/lib/onboarding-invite.ts`).
 
@@ -67,7 +69,7 @@ Admins can always do the manual route: Admin → Applications → **Accepted / I
 
 - **Directory** (`DashboardClient.tsx`, `DirectoryFilters.tsx`): search plus filters for pathway, class year, expertise and location (OR within a group, AND across).
 - **1-on-1 matching is opt-in each month** (`app/lib/matching.ts`, `app/api/admin/matches`). **Create Round** opens an empty round and emails every onboarded member an invitation explaining how it works, with a signed one-click "Count me in" (`/api/match-join`, no sign-in). Members can also choose **Join every month automatically** (`members.match_auto_opt_in`): they're put in when a round opens and skip the invitation. **Remind Members** re-sends only to people who haven't answered. **Run Match** pairs only the people who joined; the match email and its subject say who reaches out first. Nothing runs on a schedule.
-- **Job board, Asks & Offers (marketplace), Pitch Decks, Perks, Links, Companies, Events** are member features; see `SESSION_HANDOFF.md`.
+- **Job board, Asks & Offers (marketplace), Pitch Decks, Perks, Links, Companies, Events** are member features; see [architecture.md](architecture.md).
 - **Admin**: Applications, Members (past-member toggle, invite/resend, WhatsApp intro), Companies, Events, Matches, Perks, Analytics, Settings.
 - **Auth**: passwordless magic links (members: only emails already in `members`; admins: only `ADMIN_EMAILS`). Cookies `rcceb_session` and `rcceb_admin_session`, renewed on each visit for 30 days. `proxy.ts` is the gate. The callback page hides the token from the address bar.
 - **Removed on purpose:** Stripe, Overexposed, YouTube, AI academy, talent pool, newsletter, email templates, the weekly 1-on-1 cron, the "Meet" email, job-board referrals. Don't add them back.
@@ -101,7 +103,7 @@ Admins can always do the manual route: Admin → Applications → **Accepted / I
 
 ## 9. Open items for whoever continues
 
-1. **WhatsApp step** (waiting on Onur's other repo): see `WHATSAPP_PLAN.md`. Open questions are listed there.
+1. **WhatsApp step** (waiting on Onur's other repo): see [whatsapp-plan.md](whatsapp-plan.md). Open questions are listed there.
 2. **Watch the first real clerk approval** and confirm the application flips to RC Verified + Accepted · Invited. If it stays "Sent to RC" while the sheet says Approved, read the landing project's logs (`[review] portal decision failed`).
 3. **Get the admin@rcceb.org 2FA moved off Yasemin's phone.**
 4. **Clean up local secrets:** `.env.local` still holds `LANDING_VERCEL_TOKEN` (a token for the admin@rcceb.org Vercel account, set to expire 3 Oct 2026; delete the line **and** revoke it in that account's Settings → Tokens) and `VERCEL_OIDC_TOKEN`. Remove any leftover `JOIN_DB_*` lines.

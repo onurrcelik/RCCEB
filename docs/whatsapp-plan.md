@@ -1,5 +1,7 @@
 # WhatsApp step: plan (not built here yet)
 
+Context: [developer-guide.md](developer-guide.md) section 4 (the live membership flow).
+
 Onur is building the WhatsApp automation **in a separate repo**. Don't build it in this repo until he says it's ready. This file records the plan and what already exists, so the next session can connect it.
 
 ## Where it sits in the membership flow

@@ -1,4 +1,6 @@
-# Join → portal sync plan — 2 October 2026
+# Archive: joining rcceb.org/join to the portal (2 October 2026)
+
+> **Historical.** This is how the connection was worked out, including the DigitalOcean dead end. The current flow is in [../developer-guide.md](../developer-guide.md) section 4. The "Later: make RC approval automatic" plan below has since been built (`/api/applications/rc-decision`).
 
 ## STATUS: DONE (2 Oct 2026)
 
@@ -10,12 +12,10 @@
 
 Goal: people who apply on rcceb.org/join should show up in the portal automatically. Then, when Onur invites them, onboarding opens with what they already typed (name, phone, LinkedIn, RC year, pathway).
 
-Do not print secrets from `.env.local`. Do not commit this file unless Onur asks.
-
 ## What the portal already has (no work needed)
 
 - The `applications` table (`db/schema.sql`) holds join submissions: name, email, phone, LinkedIn, graduation year, pathway (`categories`), consent flags, source, status.
-- `POST /api/applications` (`app/api/applications/route.ts`) is the intake endpoint. It needs `Authorization: Bearer <APPLICATIONS_INTAKE_SECRET>`, validates the JSON with `normalizeApplicationInput` (`app/lib/applications.ts`) using `requireAgreements: true`, inserts with source `rcceb.org`, and emails `NOTIFICATION_EMAIL`. Email only works once Resend is connected; see `SESSION_HANDOFF.md`.
+- `POST /api/applications` (`app/api/applications/route.ts`) is the intake endpoint. It needs `Authorization: Bearer <APPLICATIONS_INTAKE_SECRET>`, validates the JSON with `normalizeApplicationInput` (`app/lib/applications.ts`) using `requireAgreements: true`, inserts with source `rcceb.org`, and emails `NOTIFICATION_EMAIL`. Email only works once Resend is connected; see `../email.md`.
 - Admin → Applications lists them.
 - Admin invite (`app/api/admin/members/invite/route.ts`) copies the application onto a new member row.
 - Profile GET (`app/api/members/profile/route.ts`) fills in any blank fields from the application, so onboarding opens pre-filled.
