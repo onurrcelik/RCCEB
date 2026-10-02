@@ -34,6 +34,11 @@ CREATE TABLE IF NOT EXISTS applications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- The join form's own id for the submission (its "User ID" sheet column). Lets the
+-- website retry, or a sheet backfill re-run, without creating a second row.
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS external_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS applications_external_id_idx
+  ON applications (external_id) WHERE external_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS applications_email_idx ON applications (lower(email));
 CREATE INDEX IF NOT EXISTS applications_created_idx ON applications (created_at DESC);
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;

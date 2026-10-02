@@ -43,9 +43,20 @@ export async function POST(request: NextRequest) {
     const { value, error } = normalizeApplicationInput(body, { requireAgreements: true });
     if (!value) return NextResponse.json({ error }, { status: 400 });
 
+    // The join form's submission id (its sheet "User ID"). Optional, but when present it
+    // makes the intake idempotent: a repeat is acknowledged without a second row or email.
+    const rawExternalId = (body as Record<string, unknown>).externalId;
+    const externalId = typeof rawExternalId === 'string' && rawExternalId.trim()
+        ? rawExternalId.trim().slice(0, 100)
+        : null;
+
     let row;
     try {
-        row = await insertApplication(query, value, 'rcceb.org');
+        row = await insertApplication(query, value, 'rcceb.org', externalId);
+        if (!row && externalId) {
+            const { rows } = await query<{ id: string }>('SELECT id FROM applications WHERE external_id = $1', [externalId]);
+            return NextResponse.json({ ok: true, id: rows[0]?.id ?? null, duplicate: true });
+        }
     } catch (err) {
         console.error('Application intake insert failed:', err);
         return NextResponse.json({ error: 'Could not save the application' }, { status: 500 });

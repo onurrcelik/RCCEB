@@ -6,8 +6,8 @@ import { isValidGraduationYear, normalizeCategories, type MemberCategoryId } fro
 // same whichever way it came in.
 
 export const APPLICATION_SELECT = `id, name, first_name, last_name, email, phone, linkedin, graduation_year, categories,
-    contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, status, admission_status, notes, member_id,
-    created_at, updated_at`;
+    contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id, status, admission_status, notes,
+    member_id, created_at, updated_at`;
 
 export type ApplicationInput = {
     first_name: string;
@@ -78,21 +78,26 @@ export function normalizeApplicationInput(
     };
 }
 
+// `externalId` is the join form's own id for the submission. When it is given and a row
+// with that id already exists, nothing is inserted and this returns undefined, so a
+// retried forward or a re-run backfill never creates a second application.
 export async function insertApplication(
     q: (text: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>,
     value: ApplicationInput,
     source: string,
+    externalId: string | null = null,
 ) {
     const { rows } = await q(
         `INSERT INTO applications
             (first_name, last_name, name, email, phone, linkedin, graduation_year, categories,
-             contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING
          RETURNING ${APPLICATION_SELECT}`,
         [
             value.first_name, value.last_name, value.name, value.email, value.phone, value.linkedin,
             value.graduation_year, value.categories, value.contact_consent, value.agreed_to_terms,
-            value.agreed_to_letter_of_intent, source,
+            value.agreed_to_letter_of_intent, source, externalId,
         ],
     );
     return rows[0];
