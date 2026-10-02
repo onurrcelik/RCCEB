@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import { query } from '@/app/lib/db';
+import { isIntakeAuthorized } from '@/app/lib/intake-auth';
 import { insertApplication, normalizeApplicationInput } from '@/app/lib/applications';
 import { categoryLabel } from '@/app/lib/categories';
 import { sendResendEmail } from '@/app/lib/member-auth';
@@ -19,19 +19,8 @@ export const dynamic = 'force-dynamic';
 // This path is outside /api/admin and /api/members, so proxy.ts does not gate it —
 // the secret check below is the only thing in front of it.
 
-function authorized(request: NextRequest) {
-    const secret = process.env.APPLICATIONS_INTAKE_SECRET;
-    if (!secret) return false;
-    const header = request.headers.get('authorization');
-    const given = header?.startsWith('Bearer ') ? header.slice(7) : null;
-    if (!given) return false;
-    const expected = Buffer.from(secret);
-    const actual = Buffer.from(given);
-    return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
-
 export async function POST(request: NextRequest) {
-    if (!authorized(request)) {
+    if (!isIntakeAuthorized(request)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -52,7 +41,9 @@ export async function POST(request: NextRequest) {
 
     let row;
     try {
-        row = await insertApplication(query, value, 'rcceb.org', externalId);
+        // The site emails the RC clerks for verification at the same moment, so a new
+        // application starts as "Sent to RC" (see /api/applications/rc-decision).
+        row = await insertApplication(query, value, 'rcceb.org', externalId, 'sent to rc');
         if (!row && externalId) {
             const { rows } = await query<{ id: string }>('SELECT id FROM applications WHERE external_id = $1', [externalId]);
             return NextResponse.json({ ok: true, id: rows[0]?.id ?? null, duplicate: true });

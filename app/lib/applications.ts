@@ -89,18 +89,19 @@ export async function insertApplication(
     value: ApplicationInput,
     source: string,
     externalId: string | null = null,
+    status = 'submitted',
 ) {
     const { rows } = await q(
         `INSERT INTO applications
             (first_name, last_name, name, email, phone, linkedin, graduation_year, categories,
-             contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id, location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+             contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id, location, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING
          RETURNING ${APPLICATION_SELECT}`,
         [
             value.first_name, value.last_name, value.name, value.email, value.phone, value.linkedin,
             value.graduation_year, value.categories, value.contact_consent, value.agreed_to_terms,
-            value.agreed_to_letter_of_intent, source, externalId, value.location,
+            value.agreed_to_letter_of_intent, source, externalId, value.location, status,
         ],
     );
     return rows[0];

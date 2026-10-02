@@ -53,7 +53,8 @@ Local dev uses the **same production database**, so be careful with test data, a
 ## How the pieces talk
 
 - **rcceb.org/join → portal:** `rcceb-landing/app/api/join/route.ts` writes the application to the Google Sheet, emails reviewers via Gmail, then best-effort POSTs it to the portal's `/api/applications` with `externalId` = the sheet's User ID. The portal dedupes on `applications.external_id`. The 59 pre-Oct-2026 sheet rows were imported once.
-- **Approving** in the sheet/email flow (landing `/api/review`) is separate from the portal. In the portal, **Admin → Applications → Accepted** creates the member and sends the onboarding email.
+- **RC clerk approval → portal:** the clerk's Approve/Reject in the landing reviewer email hits landing `/api/review`, which updates the sheet and POSTs `{ externalId, decision, reviewer, reviewedAt }` to the portal's `/api/applications/rc-decision` (`PORTAL_APPLICATIONS_URL` + `/rc-decision`, same intake secret). Approve → RC Verified + Accepted, member created, onboarding email from `app/lib/onboarding-invite.ts` (once). Reject → Declined; the landing site sends the rejection email. If the portal call fails, the landing site falls back to its old welcome email. Admin → Applications → Accepted / Invite / Resend send the same onboarding email by hand.
+- **Next step, not built here:** the WhatsApp group step. See `WHATSAPP_PLAN.md`.
 
 ## Rules from Onur
 

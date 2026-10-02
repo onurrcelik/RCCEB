@@ -4,11 +4,11 @@ Tasks for Claude. Add one line per task under **To do**. Claude moves a task to 
 
 ## To do
 
-- what is welcome to rcceb onboarding link? we should make the onboarding flawless without admin touch (when the robert college clerk approves that the applicant is actually an rc alumni, it should automatically mark it in the admin dashboard and sign the onboarding link. BUT DONT DO THIS YET, I'LL TELL YOU ABOUT HOW RC CLERK APROVES THEN WE CAN DO IT.)
-
+- **WhatsApp step (waiting on Onur):** after onboarding, add the member to the RCCEB WhatsApp group and post their intro (`members.whatsapp_intro`, or one written for manual-fill members). Being built in a separate repo; see `WHATSAPP_PLAN.md`. Don't build it here until Onur says so.
 
 ## Done
 
+- **2 Oct 2026 — RC approval → onboarding with no admin step.** When an RC clerk clicks Approve in the rcceb.org reviewer email, the landing site updates the sheet and calls the portal (`POST /api/applications/rc-decision`, intake secret, matched by sheet User ID). The portal marks the application **RC Verified + Accepted**, creates the member and sends the restyled "Welcome to the Bond" email with the onboarding link and a line about the WhatsApp group. Reject → **Declined**, and the site's own rejection email goes out. New applications start as **Sent to RC**. If the portal can't be reached, the site falls back to its old WhatsApp welcome email. Admin buttons (Accepted / Invite / Resend) send the same new email.
 - **2 Oct 2026 — Add location to the member portal.** Onboarding now asks for **Location** (required, e.g. "Istanbul, Turkey"), and the server rejects onboarding without it. The directory card and the profile popup show it with a pin under the name, and directory search already matches it. Members who onboarded earlier (you) can add it under Edit profile → Location.
 - **2 Oct 2026 — Add Eray and Oz to "the team".** `NOTIFICATION_EMAIL` is now `onur5celik8@gmail.com,eray@reflectstudio.com,oz.silahtar@gmail.com` locally and on Vercel (production and preview), and production was redeployed so it's live now. All three get the new-application and perk-interest alerts.
 - **2 Oct 2026 — Does accepting send the onboarding email?** It didn't: **Portal** only appeared after you set Admission to Accepted, and was a second click. Now choosing **Accepted** asks you to confirm, then creates the member and sends "Welcome to RCCEB" right away. If they aren't marked RC Verified yet, the confirmation says so. The button is now **Invite** (if the email failed) or **Resend**. Not live until committed and pushed.
