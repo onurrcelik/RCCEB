@@ -13,10 +13,11 @@ async function withApplicationDefaults(member: InternalMember): Promise<Internal
     const needsLinkedin = !member.linkedin?.trim();
     const needsYear = !member.graduation_year;
     const needsPathway = !member.categories?.length;
-    if (!needsName && !needsPhone && !needsLinkedin && !needsYear && !needsPathway) return member;
+    const needsLocation = !member.location?.trim();
+    if (!needsName && !needsPhone && !needsLinkedin && !needsYear && !needsPathway && !needsLocation) return member;
 
-    const { rows } = await query<{ name: string; phone: string; linkedin: string | null; graduation_year: number | null; categories: string[] }>(
-        `SELECT name, phone, linkedin, graduation_year, categories
+    const { rows } = await query<{ name: string; phone: string; linkedin: string | null; location: string | null; graduation_year: number | null; categories: string[] }>(
+        `SELECT name, phone, linkedin, location, graduation_year, categories
          FROM applications
          WHERE lower(email) = lower($1)
          ORDER BY created_at DESC
@@ -33,6 +34,7 @@ async function withApplicationDefaults(member: InternalMember): Promise<Internal
         linkedin: needsLinkedin ? application.linkedin : member.linkedin,
         graduation_year: needsYear ? application.graduation_year : member.graduation_year,
         categories: needsPathway ? application.categories : member.categories,
+        location: needsLocation ? application.location || member.location : member.location,
     };
 }
 

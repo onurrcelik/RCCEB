@@ -5,7 +5,7 @@ import { isValidGraduationYear, normalizeCategories, type MemberCategoryId } fro
 // or are typed in by an admin. Both go through this one normaliser so a row looks the
 // same whichever way it came in.
 
-export const APPLICATION_SELECT = `id, name, first_name, last_name, email, phone, linkedin, graduation_year, categories,
+export const APPLICATION_SELECT = `id, name, first_name, last_name, email, phone, linkedin, location, graduation_year, categories,
     contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id, status, admission_status, notes,
     member_id, created_at, updated_at`;
 
@@ -16,6 +16,7 @@ export type ApplicationInput = {
     email: string;
     phone: string;
     linkedin: string | null;
+    location: string | null;
     graduation_year: number | null;
     categories: MemberCategoryId[];
     contact_consent: boolean;
@@ -41,6 +42,7 @@ export function normalizeApplicationInput(
     const email = text(pick('email'), 254).toLowerCase();
     const phone = text(pick('phone'), 40);
     const linkedin = text(pick('linkedin', 'linkedIn'), 300) || null;
+    const location = text(pick('location'), 120) || null;
     const yearRaw = pick('graduation_year', 'graduationYear');
     const categories = normalizeCategories(pick('categories', 'memberTypes', 'member_types'));
 
@@ -69,6 +71,7 @@ export function normalizeApplicationInput(
             email,
             phone,
             linkedin,
+            location,
             graduation_year: yearRaw === undefined ? null : Number(yearRaw),
             categories,
             contact_consent: pick('contact_consent', 'contactConsent') === true,
@@ -90,14 +93,14 @@ export async function insertApplication(
     const { rows } = await q(
         `INSERT INTO applications
             (first_name, last_name, name, email, phone, linkedin, graduation_year, categories,
-             contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             contact_consent, agreed_to_terms, agreed_to_letter_of_intent, source, external_id, location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING
          RETURNING ${APPLICATION_SELECT}`,
         [
             value.first_name, value.last_name, value.name, value.email, value.phone, value.linkedin,
             value.graduation_year, value.categories, value.contact_consent, value.agreed_to_terms,
-            value.agreed_to_letter_of_intent, source, externalId,
+            value.agreed_to_letter_of_intent, source, externalId, value.location,
         ],
     );
     return rows[0];

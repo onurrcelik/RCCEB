@@ -15,6 +15,7 @@ import {
     PlusCircleIcon,
     PencilSquareIcon,
     AcademicCapIcon,
+    MapPinIcon,
     ArrowDownTrayIcon,
     CheckCircleIcon,
     MinusCircleIcon,
@@ -29,6 +30,7 @@ interface Applicant {
     email: string;
     phone: string;
     linkedin: string | null;
+    location: string | null;
     graduation_year: number | null;
     categories: string[];
     contact_consent: boolean;
@@ -75,6 +77,7 @@ const CSV_COLUMNS: { label: string; value: (a: Applicant) => unknown }[] = [
     { label: 'Email',                  value: a => a.email },
     { label: 'Phone',                  value: a => a.phone },
     { label: 'Graduation Year',        value: a => a.graduation_year },
+    { label: 'Location',               value: a => a.location },
     { label: 'Pathway',                value: a => a.categories.map(id => categoryLabel(id, 'label')).join('; ') },
     { label: 'LinkedIn',               value: a => a.linkedin },
     { label: 'Contact Consent',        value: a => yesNo(a.contact_consent) },
@@ -274,7 +277,8 @@ export default function ApplicationsPage() {
             a.name.toLowerCase().includes(q) ||
             a.email.toLowerCase().includes(q) ||
             (a.phone || '').toLowerCase().includes(q) ||
-            String(a.graduation_year ?? '').includes(q)
+            String(a.graduation_year ?? '').includes(q) ||
+            (a.location ?? '').toLowerCase().includes(q)
         ),
     );
 
@@ -420,6 +424,7 @@ export default function ApplicationsPage() {
                                             <div className="font-semibold text-slate-900 text-sm">{applicant.name}</div>
                                             <div className="text-xs text-slate-500">
                                                 {applicant.graduation_year ? `RC ${applicant.graduation_year}` : 'Class year —'}
+                                                {applicant.location && <span> · {applicant.location}</span>}
                                                 {applicant.member_id && <span className="ml-2 text-green-600 font-semibold">· Invited to portal</span>}
                                             </div>
                                         </td>
@@ -572,6 +577,13 @@ export default function ApplicationsPage() {
                                     <div className="text-[15px] font-medium text-slate-700 flex items-center gap-2.5">
                                         <AcademicCapIcon className="w-4 h-4 text-slate-400 shrink-0" />
                                         {selectedApplicant.graduation_year ?? '—'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Location</div>
+                                    <div className="text-[15px] font-medium text-slate-700 flex items-center gap-2.5">
+                                        <MapPinIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                                        {selectedApplicant.location || '—'}
                                     </div>
                                 </div>
                             </div>

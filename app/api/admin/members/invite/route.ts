@@ -14,6 +14,7 @@ type ApplicationRow = {
     email: string;
     phone: string | null;
     linkedin: string | null;
+    location: string | null;
     graduation_year: number | null;
     categories: string[];
 };
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (applicationId) {
         const { rows } = await query<ApplicationRow>(
-            'SELECT id, name, first_name, email, phone, linkedin, graduation_year, categories FROM applications WHERE id = $1',
+            'SELECT id, name, first_name, email, phone, linkedin, location, graduation_year, categories FROM applications WHERE id = $1',
             [applicationId],
         );
         const app = rows[0];
@@ -70,19 +71,20 @@ export async function POST(request: NextRequest) {
         firstName = app.first_name || app.name.split(' ')[0] || 'there';
         try {
             const { rows: upserted } = await query<{ id: string }>(
-                `INSERT INTO members (application_id, email, name, phone, linkedin, graduation_year, categories, onboarding_complete)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, false)
+                `INSERT INTO members (application_id, email, name, phone, linkedin, graduation_year, categories, location, onboarding_complete)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false)
                  ON CONFLICT (email) DO UPDATE SET
                     application_id = EXCLUDED.application_id,
                     name = COALESCE(members.name, EXCLUDED.name),
                     phone = COALESCE(members.phone, EXCLUDED.phone),
                     linkedin = COALESCE(members.linkedin, EXCLUDED.linkedin),
+                    location = COALESCE(members.location, EXCLUDED.location),
                     graduation_year = COALESCE(members.graduation_year, EXCLUDED.graduation_year),
                     categories = CASE WHEN cardinality(members.categories) = 0 THEN EXCLUDED.categories ELSE members.categories END,
                     is_past_member = false,
                     updated_at = now()
                  RETURNING id`,
-                [app.id, email, app.name, app.phone || null, app.linkedin, app.graduation_year, app.categories ?? []],
+                [app.id, email, app.name, app.phone || null, app.linkedin, app.graduation_year, app.categories ?? [], app.location],
             );
             memberId = upserted[0].id;
             await query('UPDATE applications SET member_id = $1, updated_at = now() WHERE id = $2', [memberId, app.id]);
