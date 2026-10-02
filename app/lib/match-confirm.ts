@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { query } from '@/app/lib/db';
 import { getBaseUrl } from '@/app/lib/site-url';
 
-// One-click "did you meet?" links for the weekly 1-on-1 emails.
+// One-click "did you meet?" links for the monthly 1-on-1 emails.
 //
 // Confirming a meeting used to mean opening the portal, logging in and finding the match
 // section — six steps for a yes/no — and about three quarters of pairs never answered.
@@ -54,9 +54,9 @@ export type MetAsk = {
 };
 
 // The round the question is about: the most recent one that actually produced pairs.
-// Derived rather than "the second newest round" because Sunday's cron opens the new round
-// before it emails, so the newest round is this week's and has no matches in it yet.
-// `excludeRoundId` is for Monday, where the round being emailed about was just matched.
+// Derived rather than "the second newest round" because a new round is opened before its
+// email goes out, so the newest round is this month's and has no matches in it yet.
+// `excludeRoundId` is for the intro emails, where the round being emailed about was just matched.
 async function lastMatchedRound(excludeRoundId?: string | null) {
     const exclude = excludeRoundId && UUID_RE.test(excludeRoundId) ? excludeRoundId : null;
     const { rows } = await query<{ id: string; week_of: string | null }>(
@@ -82,7 +82,7 @@ export async function pendingMetAsks(memberIds: string[], excludeRoundId?: strin
         return await collectMetAsks(memberIds, excludeRoundId);
     } catch (error) {
         // The question rides along on emails whose real job is telling members they're in
-        // the round or who they got. Losing it costs a week of answers; letting it throw
+        // the round or who they got. Losing it costs a round of answers; letting it throw
         // would cost the send itself, so fail soft — but loudly, since a silently missing
         // question looks exactly like nobody having anything to answer.
         console.error('pendingMetAsks failed, sending without the question:', error);
@@ -143,8 +143,8 @@ async function collectMetAsks(memberIds: string[], excludeRoundId?: string | nul
 
 // ── The block that carries the question in an email ────────────────────────────
 
-// The same question in both weekly emails, so a member meets one phrasing whether they
-// answer on Sunday or on Monday. Two buttons of equal weight on purpose: the moment "no"
+// The same question in both monthly emails, so a member meets one phrasing whether they
+// answer from the round-open email or the intro email. Two buttons of equal weight on purpose: the moment "no"
 // looks like a confession people stop answering at all, and how often these meetings
 // *don't* happen is the number worth having.
 // Returns null rather than throwing for the same reason pendingMetAsks swallows its
@@ -161,7 +161,7 @@ export function renderMetAskEmail(ask: MetAsk, escapeHtml: (value: string) => st
 function buildMetAskEmail(ask: MetAsk, escapeHtml: (value: string) => string) {
     const yes = buildMatchConfirmUrl(ask.roundId, ask.selfId, 'yes');
     const no = buildMatchConfirmUrl(ask.roundId, ask.selfId, 'no');
-    const question = `Did you meet ${ask.partnerName} last week?`;
+    const question = `Did you meet ${ask.partnerName} last month?`;
 
     const text = `${question}\n\nYes, we met: ${yes}\nNo, we didn't: ${no}`;
 

@@ -28,9 +28,7 @@ The public marketing site is https://www.rcceb.org/. This repo is only the membe
 | Person | Email | Access |
 | --- | --- | --- |
 | Onur Çelik | onur5celik8@gmail.com | Admin. Member row exists and onboarding is **Complete**, so he is visible in the directory. |
-| Eray Erdoğan | eray@reflectstudio.com | Member row exists. Onboarding is **Pending**, so the directory shows him as **Hidden** until he finishes onboarding. He is also on the admin allow-list. |
-
-Onur added Eray in the local admin under Members → Add member and left **Already onboarded** unchecked. That is correct. Pending means the next sign-in goes to `/members/onboarding` before the rest of the dashboard.
+| Eray Erdoğan | eray@reflectstudio.com | Member. Onboarding was **Complete** by 2 October 2026. He is also on the admin allow-list. |
 
 ## Links already sent to Eray
 
@@ -88,8 +86,9 @@ The previous developer's portal still exists and uses its own Resend key in the 
 
 How sending works in code:
 
-- Most mail goes through `sendResendEmail` in `app/lib/member-auth.ts`. Job board notifications use their own sender in `app/lib/job-board-notify.ts`. Perk-interest notifications use `app/api/members/perks/send-notification.ts`.
-- `sendResendEmail` takes `category: 'transactional' | 'marketing'`. Only match emails (`app/lib/matching.ts`, `app/api/admin/matches/route.ts`) are `marketing`. Only those get the Unsubscribe footer and `List-Unsubscribe` headers and are skipped for unsubscribed people. Transactional mail (sign-in, invites, email change, new-application alerts) has no unsubscribe link and always sends. All mail from `sendResendEmail` sets `reply_to` to `EMAIL_REPLY_TO`. This change was made on 2 October and is **uncommitted** (see below).
+- Most mail goes through `sendResendEmail` in `app/lib/member-auth.ts`. Job board notifications use their own sender in `app/lib/job-board-notify.ts`. Perk-interest notifications use `app/api/members/perks/send-notification.ts`. Asks & Offers notifications are in `app/lib/marketplace-notify.ts`.
+- `NOTIFICATION_EMAIL` ("the team" for new-application and perk-interest alerts) is only `onur5celik8@gmail.com`.
+- `sendResendEmail` takes `category: 'transactional' | 'marketing'`. Only match emails (`app/lib/matching.ts`, `app/api/admin/matches/route.ts`) and Asks & Offers notifications are `marketing`. Only those get the Unsubscribe footer and `List-Unsubscribe` headers and are skipped for unsubscribed people. Transactional mail (sign-in, invites, email change, new-application alerts) has no unsubscribe link and always sends. All mail from `sendResendEmail` sets `reply_to` to `EMAIL_REPLY_TO`. Committed in `ad80c04` (`resend`), not pushed yet on 2 October.
 - Sign-in emails: the button is navy `#213b6d` with white text. Gmail dark mode recolors it light purple. That is the mail client, not a bug.
 - Local dev does not send sign-in emails. The auth routes return `devLink` instead whenever `NODE_ENV` is not `production`.
 - `sendSignInEmail` throws if `RESEND_API_KEY` is missing, and the login routes then return 500. Unknown member emails and non-admin emails return `{ ok: true }` and send nothing, on purpose. So `{ ok: true }` alone does not prove an email went out. Check the inbox or Resend's Emails page.
@@ -121,13 +120,19 @@ Desktop layout at `md` and up was meant to stay the same.
 - `app/components/profile/CompanyFields.tsx` and `ExpertisePicker.tsx` — larger tap targets below `sm` / `md` only.
 - Job board and marketplace inputs that used `text-zinc-950` on dark backgrounds now use `text-white`, so typed text is visible. That change is visible on desktop too. It was a contrast bug, not a layout change.
 
-## Uncommitted on 2 October
+## Changes made on 2 October
 
-Not on the live site. Do not commit unless Onur asks. Pushing to `main` deploys.
+Onur committed the email footer fix and `.gitignore` as `ad80c04` (`resend`). It is one commit ahead of `origin/main`, so it is not live yet. Everything else below is uncommitted. Do not commit or push unless Onur asks. Pushing to `main` deploys. All of it passes `next build` and was tested against the live database on a local dev server. Onur's to-do list for Claude is `TODO.md`.
 
-- `app/lib/member-auth.ts` — unsubscribe footer and headers only on marketing mail, and `reply_to` on every email (see **Email**). It passes `tsc` and `eslint`. No test email has been sent with this version yet.
-- `.gitignore` — `vercel link` added `.vercel` and `.env*`.
-- `SESSION_HANDOFF.md` — this update.
+- **Email footer** (in `ad80c04`). `app/lib/member-auth.ts` — unsubscribe footer and headers only on marketing mail, `reply_to` on every email (see **Email**).
+- **30-day sign-in.** `proxy.ts` + `refreshSessionCookie` in `app/lib/auth.ts` re-issue the session cookie on every authorized member and admin request, so it expires 30 days after the last visit instead of 30 days after sign-in. The `auth_sessions` row already rolled forward. Only the cookie didn't.
+- **Applications.** The "Meet" button, `/api/admin/send-invite`, the booking-link setting and `app/lib/admin-config.ts` are gone. RCCEB's approval is: Robert College staff check the applicant is an RC graduate, then the admin accepts and clicks **Portal** ("Welcome to RCCEB" onboarding email). Application status values are now `submitted | sent to rc | rc verified` (was `meeting invited | meeting done`). Admin → Settings only has the system status check now.
+- **1-on-1s are monthly and manual.** `/api/cron/weekly-match-round` is deleted, so nothing is scheduled and there is no cron to set up. `nextMonday()` became `roundDate()` (the day the round is opened). The `match_rounds.week_of` column keeps its name and is displayed as a month. All copy and email subjects say "this month" / "last month". `create_round` now refuses while another round is open.
+- **Asks & Offers.** The member **Marketplace** is now **Asks & Offers** (section id still `marketplace`, table still `marketplace_listings`). Each post has `type` `ask | offer`. Members can opt in to emails for new asks and/or offers (`marketplace_subscriptions`, `/api/members/marketplace/notifications`). The Job Board was deliberately left as is, at Onur's request.
+- **Job board referrals removed.** Refer panel, `/api/members/job-board/[id]/refer`, the outside-friend share page `/jobs/[token]` and `/api/jobs/[token]`, the referral email, and referral attribution on applications. Only members apply now. The separate member-portal **Refer a Friend** section (suggest people to join) is unrelated and untouched.
+- **Database.** `npm run db:setup` was run on 2 October with only additive changes: `marketplace_listings.type` and the `marketplace_subscriptions` table. The old referral pieces are still in the database and in `db/schema.sql` but unused: `job_board_referrals`, `job_board_posts.share_token`, and the `external_*` / `referred_by_member_id` / `referrer_name` columns on `job_board_applications`. Dropping them was blocked by the safety check because `db:setup` runs on production. Leave them unless Onur asks.
+- `.gitignore` (in `ad80c04`) — `vercel link` added `.vercel` and `.env*`.
+- `README.md`, `TODO.md`, `SESSION_HANDOFF.md` — updated for the above.
 
 ## Auth map
 
@@ -145,6 +150,7 @@ Not on the live site. Do not commit unless Onur asks. Pushing to `main` deploys.
 - Do not remove the PostgreSQL `0.0.0.0/0` rule unless Vercel can still reach Aurora.
 - Do not add a paid email service.
 - Do not revoke the previous developer's Resend key or remove their access unless Onur asks.
+- Do not add back the "Meet" email, the weekly cron, or job board referrals. Do not automate 1-on-1 rounds unless Onur asks.
 
 ## Pitch decks (live since `d902f78`)
 

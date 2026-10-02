@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS applications (
   agreed_to_terms BOOLEAN NOT NULL DEFAULT FALSE,
   agreed_to_letter_of_intent BOOLEAN NOT NULL DEFAULT FALSE,
   source TEXT,                                   -- 'rcceb.org' or 'admin'
-  status TEXT NOT NULL DEFAULT 'submitted',      -- submitted | meeting invited | meeting done
+  status TEXT NOT NULL DEFAULT 'submitted',      -- submitted | sent to rc | rc verified
   admission_status TEXT NOT NULL DEFAULT '',     -- '' | accepted | deferred | declined
   notes TEXT NOT NULL DEFAULT '',
   member_id UUID,                                -- set when a portal invite is sent
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS job_board_referrals (
 CREATE INDEX IF NOT EXISTS job_board_referrals_referred_idx ON job_board_referrals (referred_member_id, status);
 ALTER TABLE job_board_referrals ENABLE ROW LEVEL SECURITY;
 
--- ── Marketplace ───────────────────────────────────────────────────────────────
+-- ── Asks & Offers (marketplace_listings) ───────────────────────────────────────
 CREATE TABLE IF NOT EXISTS marketplace_listings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   author_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
@@ -309,8 +309,21 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
 );
 CREATE INDEX IF NOT EXISTS marketplace_listings_created_idx ON marketplace_listings (created_at DESC);
 ALTER TABLE marketplace_listings ENABLE ROW LEVEL SECURITY;
+-- Shown in the portal as "Asks & Offers": an ask is something a member needs, an offer
+-- is something they can help with.
+ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'offer'
+  CHECK (type IN ('ask', 'offer'));
 
--- ── Weekly 1-on-1 matching ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS marketplace_subscriptions (
+  member_id UUID PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
+  notify_asks BOOLEAN NOT NULL DEFAULT FALSE,
+  notify_offers BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE marketplace_subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- ── Monthly 1-on-1 matching ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS match_rounds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   week_of DATE,

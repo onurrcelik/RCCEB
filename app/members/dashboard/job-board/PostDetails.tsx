@@ -8,14 +8,11 @@ import {
     LockClosedIcon,
     PencilIcon,
     PhoneIcon,
-    SparklesIcon,
     TrashIcon,
     UserGroupIcon,
-    UserPlusIcon,
 } from '@heroicons/react/24/outline';
 import type { JobBoardApplication, JobBoardPost } from '@/app/lib/job-board';
 import { ApplyForm } from './ApplyForm';
-import { ReferPanel } from './ReferPanel';
 
 type Props = {
     post: JobBoardPost;
@@ -46,7 +43,6 @@ export function PostDetails({ post, onEdit, onChanged }: Props) {
     const [working, setWorking] = useState(false);
     const [error, setError] = useState('');
     const [showApply, setShowApply] = useState(false);
-    const [showRefer, setShowRefer] = useState(false);
 
     const loadApplications = useCallback(() => {
         if (!post.is_own) return;
@@ -119,18 +115,6 @@ export function PostDetails({ post, onEdit, onChanged }: Props) {
                 </div>
             )}
 
-            {post.incoming_referral && !post.viewer_applied && (
-                <div className="mt-5 rounded-xl border border-gold-400/30 bg-gold-400/10 px-4 py-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-blue-300">
-                        <SparklesIcon className="h-4 w-4" />
-                        {post.incoming_referral.referrer_name} referred you for this role
-                    </div>
-                    {post.incoming_referral.note && (
-                        <p className="mt-1.5 text-xs leading-relaxed text-zinc-300">&ldquo;{post.incoming_referral.note}&rdquo;</p>
-                    )}
-                </div>
-            )}
-
             {!post.is_own && (
                 <div className="mt-5 border-t border-zinc-800 pt-5">
                     {post.viewer_applied ? (
@@ -143,20 +127,12 @@ export function PostDetails({ post, onEdit, onChanged }: Props) {
                             </button>
                         </div>
                     ) : post.status === 'open' ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                onClick={() => { setShowApply(value => !value); setShowRefer(false); }}
-                                className="rounded-xl bg-gold-400 px-4 py-2.5 text-xs font-semibold text-zinc-950 transition-colors hover:bg-gold-300"
-                            >
-                                Apply
-                            </button>
-                            <button
-                                onClick={() => { setShowRefer(value => !value); setShowApply(false); }}
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/60 px-4 py-2.5 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-800"
-                            >
-                                <UserPlusIcon className="h-4 w-4" /> Refer a friend
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setShowApply(value => !value)}
+                            className="rounded-xl bg-gold-400 px-4 py-2.5 text-xs font-semibold text-zinc-950 transition-colors hover:bg-gold-300"
+                        >
+                            Apply
+                        </button>
                     ) : (
                         <div className="inline-flex items-center gap-2 text-xs text-zinc-500">
                             <LockClosedIcon className="h-4 w-4" /> This post is closed.
@@ -170,16 +146,6 @@ export function PostDetails({ post, onEdit, onChanged }: Props) {
                             onApplied={() => { setShowApply(false); onChanged(); }}
                         />
                     )}
-
-                    {showRefer && post.status === 'open' && (
-                        <ReferPanel
-                            postId={post.id}
-                            shareToken={post.share_token}
-                            authorId={post.author.id}
-                            onCancel={() => setShowRefer(false)}
-                            onReferred={onChanged}
-                        />
-                    )}
                 </div>
             )}
 
@@ -190,29 +156,14 @@ export function PostDetails({ post, onEdit, onChanged }: Props) {
                             <PencilIcon className="h-3.5 w-3.5" /> Edit
                         </button>
                         {post.status === 'open' && (
-                            <>
-                                <button onClick={closePost} disabled={working} className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white">
-                                    <CheckCircleIcon className="h-3.5 w-3.5" /> Close
-                                </button>
-                                <button onClick={() => setShowRefer(value => !value)} disabled={working} className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white">
-                                    <UserPlusIcon className="h-3.5 w-3.5" /> Refer
-                                </button>
-                            </>
+                            <button onClick={closePost} disabled={working} className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white">
+                                <CheckCircleIcon className="h-3.5 w-3.5" /> Close
+                            </button>
                         )}
                         <button onClick={deletePost} disabled={working} className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/15">
                             <TrashIcon className="h-3.5 w-3.5" /> Delete
                         </button>
                     </div>
-
-                    {showRefer && post.status === 'open' && (
-                        <ReferPanel
-                            postId={post.id}
-                            shareToken={post.share_token}
-                            authorId={post.author.id}
-                            onCancel={() => setShowRefer(false)}
-                            onReferred={onChanged}
-                        />
-                    )}
 
                     <div className="mt-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                         <UserGroupIcon className="h-3.5 w-3.5" />
@@ -253,15 +204,7 @@ function ApplicantCard({ application }: { application: JobBoardApplication }) {
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-zinc-100">{applicant.name}</span>
                         {applicant.company_name && <span className="text-[11px] text-zinc-500">{applicant.company_name}</span>}
-                        {applicant.is_external && (
-                            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">External</span>
-                        )}
                     </div>
-                    {application.referred_by_name && (
-                        <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-gold-300">
-                            <SparklesIcon className="h-3 w-3" /> Referred by {application.referred_by_name}
-                        </div>
-                    )}
                 </div>
             </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 function Section({ title, description, children }: {
@@ -20,39 +20,7 @@ function Section({ title, description, children }: {
 }
 
 export default function SettingsPage() {
-    const [meetingLink, setMeetingLink] = useState('');
-    const [loaded, setLoaded] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ok'>('idle');
-    const [saveError, setSaveError] = useState('');
     const [health, setHealth] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
-
-    useEffect(() => {
-        fetch('/api/admin/settings', { cache: 'no-store' })
-            .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d?.settings) setMeetingLink(d.settings.meeting_link || ''); })
-            .catch(() => {})
-            .finally(() => setLoaded(true));
-    }, []);
-
-    const save = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSaveStatus('saving');
-        setSaveError('');
-        try {
-            const res = await fetch('/api/admin/settings', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ meeting_link: meetingLink }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.error || 'Failed to save');
-            setSaveStatus('ok');
-            setTimeout(() => setSaveStatus('idle'), 3000);
-        } catch (err) {
-            setSaveError(err instanceof Error ? err.message : 'Failed to save');
-            setSaveStatus('idle');
-        }
-    };
 
     const checkHealth = async () => {
         setHealth('checking');
@@ -73,36 +41,6 @@ export default function SettingsPage() {
                 </header>
 
                 <div className="space-y-6">
-                    <Section title="Applications" description="Used by the “Meet” button on the Applications page.">
-                        {!loaded ? (
-                            <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
-                        ) : (
-                            <form onSubmit={save} className="space-y-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Meeting booking link</label>
-                                    <input
-                                        type="url"
-                                        value={meetingLink}
-                                        onChange={e => setMeetingLink(e.target.value)}
-                                        placeholder="https://calendly.com/rcceb/intro"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue-500 focus:ring-2 focus:ring-brand-blue-500/10"
-                                    />
-                                    <p className="text-xs text-slate-400 mt-1.5">Applicants receive this link to book their intro conversation.</p>
-                                </div>
-                                {saveError && <p className="text-sm text-red-500">{saveError}</p>}
-                                <div className="flex justify-end">
-                                    <button
-                                        type="submit"
-                                        disabled={saveStatus === 'saving'}
-                                        className="px-5 py-2 bg-brand-blue-500 text-white text-[12px] font-bold uppercase tracking-widest rounded-xl hover:bg-brand-blue-600 transition-all disabled:opacity-50"
-                                    >
-                                        {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'ok' ? 'Saved ✓' : 'Save'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </Section>
-
                     <Section title="System Status" description="Verifies that the server and database connection are healthy.">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">

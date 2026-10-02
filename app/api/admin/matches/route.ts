@@ -176,6 +176,12 @@ export async function POST(request: NextRequest) {
 
     // ── Create round ───────────────────────────────────────────────────
     if (action === 'create_round') {
+        // One round at a time: run_match only ever pairs the newest open round, so a
+        // second open round would leave the first one stranded.
+        const { rows: openRounds } = await query<{ id: string }>("SELECT id FROM match_rounds WHERE status = 'open' LIMIT 1");
+        if (openRounds[0]) {
+            return NextResponse.json({ error: 'A round is already open. Run the match or delete that round first.' }, { status: 400 });
+        }
         const { round, seeded } = await createMatchRound();
         if (!round) return NextResponse.json({ error: 'Failed to create round' }, { status: 500 });
         return NextResponse.json({ ok: true, round, seeded });
@@ -252,10 +258,11 @@ export async function POST(request: NextRequest) {
             [allIds],
         );
         const byId = new Map(memberDetails.map(m => [m.id, m]));
-        // Last week's question rides along for anyone who hasn't answered it yet — a second
+        // Last month's question rides along for anyone who hasn't answered it yet — a second
         // chance at it inside the email people are most likely to open, since it's the one
-        // telling them who they got. Whoever already answered on Sunday sees nothing here,
-        // and `round_id` is excluded so the ask is about last week rather than this pairing.
+        // telling them who they got. Whoever already answered from the round-open email sees
+        // nothing here, and `round_id` is excluded so the ask is about last month rather than
+        // this pairing.
         const asks = await pendingMetAsks(allIds, round_id);
 
         let sent = 0;
@@ -288,9 +295,9 @@ export async function POST(request: NextRequest) {
                 try {
                     await sendResendEmail({
                         to: self.email,
-                        subject: `Your RCCEB 1-on-1 this week: ${other.name}`,
-                        text: `Hey ${first},\n\nYou've been matched with ${other.name} for your 30-min 1-on-1 this week!\n\n${outreachLine}\n\n${lines}${askBlock ? `\n\n—\n\n${askBlock.text}` : ''}`,
-                        html: `<p>Hey ${first},</p><p>You've been matched with <strong>${other.name}</strong> for your 30-min 1-on-1 this week!</p><p style="background:${selfIsOpener ? '#f3ead8' : '#f4f4f5'};padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;color:${selfIsOpener ? '#4a3710' : '#3f3f46'}">${outreachLine}</p><pre style="background:#f5f5f5;padding:14px;border-radius:8px;font-family:sans-serif;font-size:14px;line-height:1.6">${lines}</pre>${askBlock ? askBlock.html : ''}`,
+                        subject: `Your RCCEB 1-on-1 this month: ${other.name}`,
+                        text: `Hey ${first},\n\nYou've been matched with ${other.name} for your 30-min 1-on-1 this month!\n\n${outreachLine}\n\n${lines}${askBlock ? `\n\n—\n\n${askBlock.text}` : ''}`,
+                        html: `<p>Hey ${first},</p><p>You've been matched with <strong>${other.name}</strong> for your 30-min 1-on-1 this month!</p><p style="background:${selfIsOpener ? '#f3ead8' : '#f4f4f5'};padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;color:${selfIsOpener ? '#4a3710' : '#3f3f46'}">${outreachLine}</p><pre style="background:#f5f5f5;padding:14px;border-radius:8px;font-family:sans-serif;font-size:14px;line-height:1.6">${lines}</pre>${askBlock ? askBlock.html : ''}`,
                         category: 'marketing',
                     });
                     sent++;
@@ -331,7 +338,7 @@ export async function POST(request: NextRequest) {
         // opt-in sit in the round and quietly go nowhere.
         const pool = await loadMatchPool();
         if (!pool.ids.has(member_id)) {
-            return NextResponse.json({ error: 'This member is not in the 1-on-1 pool (graduated batch, inactive subscription, or onboarding incomplete)' }, { status: 400 });
+            return NextResponse.json({ error: 'This member is not in the 1-on-1 pool (past member, or onboarding not finished)' }, { status: 400 });
         }
 
         const { rows: existingRows } = await query<{ id: string }>(

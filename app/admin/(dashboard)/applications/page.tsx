@@ -44,8 +44,8 @@ interface Applicant {
 
 const APPLICATION_STATUS_OPTIONS = [
     { value: 'submitted', label: 'Submitted', color: 'text-brand-blue-500 bg-brand-blue-500/5 border-brand-blue-500/10' },
-    { value: 'meeting invited', label: 'Meeting Invited', color: 'text-violet-600 bg-violet-50 border-violet-100' },
-    { value: 'meeting done', label: 'Meeting Done', color: 'text-cyan-600 bg-cyan-50 border-cyan-100' },
+    { value: 'sent to rc', label: 'Sent to RC', color: 'text-violet-600 bg-violet-50 border-violet-100' },
+    { value: 'rc verified', label: 'RC Verified', color: 'text-cyan-600 bg-cyan-50 border-cyan-100' },
 ];
 
 const ADMISSION_STATUS_OPTIONS = [
@@ -112,7 +112,6 @@ export default function ApplicationsPage() {
     const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
     const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-    const [sendingMeetingId, setSendingMeetingId] = useState<string | null>(null);
     const [sendingMemberInviteId, setSendingMemberInviteId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [addingApplicant, setAddingApplicant] = useState(false);
@@ -226,25 +225,6 @@ export default function ApplicationsPage() {
             setError('Could not delete the application.');
         } finally {
             setDeletingId(null);
-        }
-    };
-
-    const sendMeetingInvite = async (applicant: Applicant) => {
-        setSendingMeetingId(applicant.id);
-        try {
-            const response = await fetch('/api/admin/send-invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: applicant.id }),
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'Failed to send the meeting invite');
-            setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'meeting invited' } : a));
-            flash(`Meeting invite sent to ${applicant.email}`);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to send the meeting invite');
-        } finally {
-            setSendingMeetingId(null);
         }
     };
 
@@ -495,19 +475,6 @@ export default function ApplicationsPage() {
                                                     className="text-[11px] font-bold text-slate-500 hover:text-brand-blue-500 transition-colors uppercase tracking-widest"
                                                 >
                                                     Details
-                                                </button>
-                                                <button
-                                                    onClick={() => sendMeetingInvite(applicant)}
-                                                    disabled={sendingMeetingId === applicant.id}
-                                                    title="Email a link to book an intro meeting"
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-blue-500/10 text-brand-blue-500 hover:bg-brand-blue-500 hover:text-white rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all disabled:opacity-50"
-                                                >
-                                                    {sendingMeetingId === applicant.id ? (
-                                                        <ArrowPathIcon className="w-3 h-3 animate-spin" />
-                                                    ) : (
-                                                        <EnvelopeIcon className="w-3 h-3" />
-                                                    )}
-                                                    Meet
                                                 </button>
                                                 {applicant.admission_status === 'accepted' && (
                                                     <button

@@ -17,11 +17,10 @@ export type JobBoardAuthor = {
     company_name: string | null;
 };
 
-// A single application shown to the post owner. For a member applicant, the
-// profile fields are populated from the members/directory record; for an
-// external (outside-friend) applicant, only name/email are known.
+// A single application shown to the post owner, with the applicant's profile
+// fields from their members/directory record.
 export type JobBoardApplicant = {
-    member_id: string | null;
+    member_id: string;
     name: string;
     avatar_url: string | null;
     company_name: string | null;
@@ -29,7 +28,6 @@ export type JobBoardApplicant = {
     phone: string | null;
     linkedin: string | null;
     bio: string | null;
-    is_external: boolean;
 };
 
 export type JobBoardApplication = {
@@ -37,14 +35,7 @@ export type JobBoardApplication = {
     applicant: JobBoardApplicant;
     pitch: string;
     link: string | null;
-    referred_by_name: string | null;
     created_at: string;
-};
-
-// Surfaced to a viewer who has a pending referral for a post ("X referred you").
-export type JobBoardIncomingReferral = {
-    referrer_name: string;
-    note: string | null;
 };
 
 export type JobBoardPost = {
@@ -63,10 +54,6 @@ export type JobBoardPost = {
     viewer_applied: boolean;
     // Owner-only: how many applications the post has received.
     application_count: number;
-    // Public token for the "refer an outside friend" share link (all viewers).
-    share_token: string | null;
-    // Populated when the viewer was referred to this post by another member.
-    incoming_referral: JobBoardIncomingReferral | null;
 };
 
 export type JobBoardPostInput = {
@@ -140,7 +127,6 @@ export function getJobBoardDisplayLocation(post: Pick<JobBoardPost, 'type' | 'lo
 
 export const MAX_PITCH_LENGTH = 1500;
 export const MAX_APPLICATION_LINK_LENGTH = 500;
-export const MAX_REFERRAL_NOTE_LENGTH = 500;
 
 function normalizeLink(raw: unknown): { value: string | null; error?: string } {
     if (typeof raw !== 'string') return { value: null };
@@ -174,35 +160,4 @@ export function normalizeApplicationInput(body: Record<string, unknown>): {
     if (link.error) return { error: link.error };
 
     return { value: { pitch, link: link.value } };
-}
-
-export type JobBoardExternalApplicationInput = JobBoardApplicationInput & {
-    name: string;
-    email: string;
-};
-
-export function normalizeExternalApplicationInput(body: Record<string, unknown>): {
-    value?: JobBoardExternalApplicationInput;
-    error?: string;
-} {
-    const base = normalizeApplicationInput(body);
-    if (!base.value) return { error: base.error };
-
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    const email = typeof body.email === 'string' ? body.email.trim() : '';
-    if (!name) return { error: 'Your name is required' };
-    if (name.length > 120) return { error: 'Name is too long' };
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
-        return { error: 'Enter a valid email address' };
-    }
-
-    return { value: { ...base.value, name, email } };
-}
-
-export function normalizeReferralNote(raw: unknown): { value: string | null; error?: string } {
-    if (typeof raw !== 'string') return { value: null };
-    const trimmed = raw.trim();
-    if (!trimmed) return { value: null };
-    if (trimmed.length > MAX_REFERRAL_NOTE_LENGTH) return { value: null, error: 'Referral note is too long' };
-    return { value: trimmed };
 }

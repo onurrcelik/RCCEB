@@ -22,9 +22,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     let applications;
     try {
-        ({ rows: applications } = await query<{ id: string; applicant_member_id: string | null; external_name: string | null; external_email: string | null; pitch: string; link: string | null; referrer_name: string | null; created_at: string }>(
-            `SELECT a.id, a.applicant_member_id, a.external_name, a.external_email, a.pitch, a.link,
-                    a.referrer_name, a.created_at
+        ({ rows: applications } = await query<{ id: string; applicant_member_id: string; pitch: string; link: string | null; created_at: string }>(
+            `SELECT a.id, a.applicant_member_id, a.pitch, a.link, a.created_at
              FROM job_board_applications a
              WHERE a.post_id = $1
              ORDER BY a.created_at DESC`,
@@ -35,9 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
     if (!applications.length) return NextResponse.json({ applications: [] });
 
-    const memberIds = Array.from(new Set(
-        applications.map(application => application.applicant_member_id).filter((value): value is string => Boolean(value)),
-    ));
+    const memberIds = Array.from(new Set(applications.map(application => application.applicant_member_id)));
 
     const membersById = new Map<string, { name: string | null; avatar_url: string | null; email: string | null; phone: string | null; linkedin: string | null; bio: string | null }>();
     const companyByMemberId = new Map<string, string>();
@@ -59,24 +56,21 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
 
     const result: JobBoardApplication[] = applications.map(application => {
-        const profile = application.applicant_member_id ? membersById.get(application.applicant_member_id) : undefined;
-        const isExternal = !application.applicant_member_id;
+        const profile = membersById.get(application.applicant_member_id);
         return {
             id: application.id,
             applicant: {
-                member_id: application.applicant_member_id ?? null,
-                name: (isExternal ? application.external_name : profile?.name) || 'Applicant',
+                member_id: application.applicant_member_id,
+                name: profile?.name || 'Applicant',
                 avatar_url: profile?.avatar_url ?? null,
-                company_name: application.applicant_member_id ? companyByMemberId.get(application.applicant_member_id) ?? null : null,
-                email: isExternal ? application.external_email ?? null : profile?.email ?? null,
+                company_name: companyByMemberId.get(application.applicant_member_id) ?? null,
+                email: profile?.email ?? null,
                 phone: profile?.phone ?? null,
                 linkedin: profile?.linkedin ?? null,
                 bio: profile?.bio ?? null,
-                is_external: isExternal,
             },
             pitch: application.pitch,
             link: application.link ?? null,
-            referred_by_name: application.referrer_name ?? null,
             created_at: application.created_at,
         };
     });

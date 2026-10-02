@@ -5,7 +5,8 @@ import { APPLICATION_SELECT, insertApplication, normalizeApplicationInput } from
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_VALUES = new Set(['submitted', 'meeting invited', 'meeting done']);
+// Robert College checks each applicant really graduated before anyone is accepted.
+const STATUS_VALUES = new Set(['submitted', 'sent to rc', 'rc verified']);
 const ADMISSION_VALUES = new Set(['', 'accepted', 'deferred', 'declined']);
 
 export async function GET(request: NextRequest) {

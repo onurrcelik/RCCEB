@@ -49,7 +49,7 @@ const NOT_MET_REASON_LABELS: Record<string, string> = {
     no_contact: 'Never connected',
     no_schedule: 'Messaged, never scheduled',
     fell_through: 'Scheduled, fell through',
-    no_time: 'No time this week',
+    no_time: 'No time this month',
 };
 
 // What each side said on the "did you meet?" follow-up: stars + "how was it?" after a yes,
@@ -491,7 +491,7 @@ export default function MatchesPage() {
     const duplicateMatches = currentRound?.matches.filter(m => m.duplicate_previous_matches.length > 0) || [];
     const unmatchedOptIns = currentRound ? getUnmatchedOptIns(currentRound).filter(isCurrent) : [];
 
-    // Members still in the weekly 1-on-1 pool (see app/lib/categories.ts) — past members
+    // Members still in the monthly 1-on-1 pool (see app/lib/categories.ts) — past members
     // and unfinished onboarding don't show up in the opt-in picker or the manual match modal.
     const poolMembers = useMemo(() => allMembers.filter(isMatchEligible), [allMembers]);
 
@@ -520,7 +520,7 @@ export default function MatchesPage() {
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Matches</h1>
                     <span className="px-2.5 py-1 bg-white text-slate-500 text-[10px] font-bold uppercase rounded-full border border-slate-200 shadow-sm">
-                        Weekly 1-on-1
+                        Monthly 1-on-1
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -547,11 +547,11 @@ export default function MatchesPage() {
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 mb-6">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
                     <div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">This Week</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">This Month</div>
                         <div className="flex items-center gap-3">
                             <h2 className="text-lg font-bold text-slate-900">
                                 {currentRound
-                                    ? `Week of ${new Date(currentRound.week_of + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}`
+                                    ? new Date(currentRound.week_of + 'T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                                     : 'No round yet'}
                             </h2>
                             {currentRound && <StatusBadge status={currentRound.status} />}
@@ -815,7 +815,7 @@ export default function MatchesPage() {
                         </div>
                     </div>
                 ) : (
-                    <p className="text-sm text-slate-400 italic">Click &quot;Create Round&quot; to kick off this week.</p>
+                    <p className="text-sm text-slate-400 italic">Click &quot;Create Round&quot; to kick off this month.</p>
                 )}
             </div>
 

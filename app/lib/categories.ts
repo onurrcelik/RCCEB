@@ -46,7 +46,7 @@ export function classYearLabel(year: number | null | undefined): string | null {
     return `RC '${String(year).slice(-2)}`;
 }
 
-// ── Weekly 1-on-1 matching pool ────────────────────────────────────────────────
+// ── Monthly 1-on-1 matching pool ───────────────────────────────────────────────
 // Every onboarded, current member takes part. There's no paywall or cohort to filter
 // on, so the pool is simply everyone who finished onboarding and hasn't been marked
 // as a past member.

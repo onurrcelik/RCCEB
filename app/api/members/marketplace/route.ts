@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { normalizeMarketplaceListingInput, type MarketplaceListing } from '@/app/lib/marketplace';
+import { normalizeMarketplaceListingInput, type MarketplaceListing, type MarketplaceListingType } from '@/app/lib/marketplace';
+import { notifyNewMarketplaceListing } from '@/app/lib/marketplace-notify';
 import { checkRateLimit, retryAfterSeconds } from '@/app/lib/request-security';
+import { getBaseUrl } from '@/app/lib/site-url';
 import { getMemberFromRequest } from '@/app/lib/member-session';
 import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-const LISTING_SELECT = 'id, author_id, title, description, contact_info, tags, created_at, updated_at';
+const LISTING_SELECT = 'id, author_id, type, title, description, contact_info, tags, created_at, updated_at';
 const AUTHOR_SELECT = 'id, name, avatar_url';
 
 function jsonNoStore(body: unknown, init?: ResponseInit) {
@@ -25,11 +27,11 @@ export async function GET(request: NextRequest) {
 
     let listings;
     try {
-        ({ rows: listings } = await query<{ id: string; author_id: string; title: string; description: string; contact_info: string; tags: unknown; created_at: string; updated_at: string }>(
+        ({ rows: listings } = await query<{ id: string; author_id: string; type: string; title: string; description: string; contact_info: string; tags: unknown; created_at: string; updated_at: string }>(
             `SELECT ${LISTING_SELECT} FROM marketplace_listings ORDER BY created_at DESC`,
         ));
     } catch {
-        return jsonNoStore({ error: 'Failed to fetch Marketplace listings' }, { status: 500 });
+        return jsonNoStore({ error: 'Failed to fetch Asks & Offers' }, { status: 500 });
     }
     if (listings.length === 0) return jsonNoStore({ listings: [] });
 
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
             [authorIds],
         ));
     } catch {
-        return jsonNoStore({ error: 'Failed to load Marketplace details' }, { status: 500 });
+        return jsonNoStore({ error: 'Failed to load Asks & Offers' }, { status: 500 });
     }
 
     const authorById = new Map(authors.map(author => [author.id, author]));
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
             const author = authorById.get(listing.author_id);
             return {
                 id: listing.id,
+                type: listing.type as MarketplaceListingType,
                 title: listing.title,
                 description: listing.description,
                 contact_info: listing.contact_info,
@@ -79,23 +82,36 @@ export async function POST(request: NextRequest) {
         key: `marketplace:create:${member.id}`,
     });
     if (!rateLimit.allowed) {
-        return jsonNoStore({ error: 'Too many listings. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(retryAfterSeconds(rateLimit.resetAt)) } });
+        return jsonNoStore({ error: 'Too many posts. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(retryAfterSeconds(rateLimit.resetAt)) } });
     }
 
     const body = await request.json().catch(() => ({}));
     const { value, error: validationError } = normalizeMarketplaceListingInput(body);
     if (!value || validationError) {
-        return jsonNoStore({ error: validationError || 'Invalid listing' }, { status: 400 });
+        return jsonNoStore({ error: validationError || 'Invalid post' }, { status: 400 });
     }
 
+    let listing;
     try {
-        const { rows } = await query(
-            `INSERT INTO marketplace_listings (author_id, title, description, contact_info, tags)
-             VALUES ($1, $2, $3, $4, $5) RETURNING ${LISTING_SELECT}`,
-            [member.id, value.title, value.description, value.contact_info, value.tags],
-        );
-        return jsonNoStore({ listing: rows[0] }, { status: 201 });
+        ({ rows: [listing] } = await query<{ id: string }>(
+            `INSERT INTO marketplace_listings (author_id, type, title, description, contact_info, tags)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${LISTING_SELECT}`,
+            [member.id, value.type, value.title, value.description, value.contact_info, value.tags],
+        ));
     } catch {
-        return jsonNoStore({ error: 'Failed to create listing' }, { status: 500 });
+        return jsonNoStore({ error: 'Failed to create post' }, { status: 500 });
     }
+
+    // Best-effort: the post is saved whether or not the emails go out.
+    try {
+        await notifyNewMarketplaceListing(
+            { id: listing.id, type: value.type, title: value.title, description: value.description },
+            { id: member.id, name: member.name },
+            `${getBaseUrl(request)}/members/dashboard?section=marketplace`,
+        );
+    } catch (notifyError) {
+        console.error('Asks & Offers notification failed', notifyError);
+    }
+
+    return jsonNoStore({ listing }, { status: 201 });
 }

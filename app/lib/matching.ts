@@ -5,11 +5,10 @@ import { BRAND } from '@/app/lib/brand';
 import { pendingMetAsks, renderMetAskEmail } from '@/app/lib/match-confirm';
 import { escapeHtml } from '@/app/lib/html-escape';
 
-// Opening a weekly 1-on-1 round: who takes part, creating the round, and the heads-up
-// email. Shared by the admin dashboard buttons and the Sunday cron so the two can't
-// drift into opening rounds differently.
+// Opening a monthly 1-on-1 round: who takes part, creating the round, and the heads-up
+// email. Rounds are opened by hand from Admin → Matches; nothing runs on a schedule.
 
-// The members taking part in the weekly 1-on-1s (see app/lib/categories.ts). Anyone outside
+// The members taking part in the monthly 1-on-1s (see app/lib/categories.ts). Anyone outside
 // it is out entirely: not seeded into a new round, not emailed about one, and not paired
 // even if an old opt-in row of theirs is still around.
 //
@@ -33,24 +32,20 @@ export async function loadMatchPool() {
     };
 }
 
-// The Monday a round created now belongs to — always the next upcoming one, so a round
-// opened on Monday itself is for the week after rather than the day it starts.
-export function nextMonday(now = new Date()) {
-    const day = now.getDay();
-    const daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : 8 - day;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + daysUntilMonday);
-    return monday.toISOString().split('T')[0];
+// The date a round is filed under: the day it was opened. The portal shows it as a month
+// ("October 2026"). The column is still called week_of from when rounds were weekly.
+export function roundDate(now = new Date()) {
+    return now.toISOString().split('T')[0];
 }
 
 // Opens a round and puts the whole pool in it. Sitting out is an explicit opt-out on the
-// portal for that week, not something a member has to remember to opt into.
+// portal for that month, not something a member has to remember to opt into.
 export async function createMatchRound() {
     let round;
     try {
         ({ rows: [round] } = await query(
             "INSERT INTO match_rounds (week_of, status) VALUES ($1, 'open') RETURNING *",
-            [nextMonday()],
+            [roundDate()],
         ));
     } catch {
         return { round: null, seeded: 0 };
@@ -71,11 +66,11 @@ export async function createMatchRound() {
 // Tells the pool the round is open. Everyone in it is already opted in, so this is a
 // heads-up with a way out rather than an invitation. Members outside the pool never get it.
 //
-// It also carries last week's "did you meet?" question for anyone whose pair still has no
-// answer on it. Sunday is the right moment to ask — the week it's about has just ended —
-// and this email was already going to land in their inbox, so the question costs the
-// member one tap and costs us no extra send. The round opened moments ago has no matches
-// in it yet, so pendingMetAsks lands on last week's round without being told to.
+// It also carries last month's "did you meet?" question for anyone whose pair still has no
+// answer on it. A new round opening is the right moment to ask — the month it's about has
+// just ended — and this email was already going to land in their inbox, so the question
+// costs the member one tap and costs us no extra send. The round opened moments ago has no
+// matches in it yet, so pendingMetAsks lands on last month's round without being told to.
 export async function notifyRoundMembers(baseUrl: string) {
     const pool = await loadMatchPool();
     const { rows: members } = await query<{ id: string; name: string | null; email: string }>(
@@ -98,9 +93,9 @@ export async function notifyRoundMembers(baseUrl: string) {
         try {
             await sendResendEmail({
                 to: member.email,
-                subject: "You're in this week's 1-on-1 round",
-                text: `Hey ${first},\n\n${askBlock ? `${askBlock.text}\n\n` : ''}This week's ${BRAND.shortName} 1-on-1 round is open and you're in — we'll email you your match once the round runs.\n\nCan't make a 30-min conversation this week? Head to the portal and opt out before matches go out. No need to do anything if you're in.\n\n${optOutLink}`,
-                html: `<p>Hey ${first},</p>${askBlock ? askBlock.html : ''}<p>This week's <strong>${BRAND.shortName} 1-on-1 round</strong> is open and you're in — we'll email you your match once the round runs.</p><p>Can't make a 30-min conversation this week? Head to the portal and opt out before matches go out. No need to do anything if you're in.</p><p><a href="${optOutLink}" style="display:inline-block;padding:10px 20px;background:${BRAND.colors.brandNavy};color:white;border-radius:8px;text-decoration:none;font-weight:600;">Sit this week out →</a></p>`,
+                subject: "You're in this month's 1-on-1 round",
+                text: `Hey ${first},\n\n${askBlock ? `${askBlock.text}\n\n` : ''}This month's ${BRAND.shortName} 1-on-1 round is open and you're in — we'll email you your match once the round runs.\n\nCan't make a 30-min conversation this month? Head to the portal and opt out before matches go out. No need to do anything if you're in.\n\n${optOutLink}`,
+                html: `<p>Hey ${first},</p>${askBlock ? askBlock.html : ''}<p>This month's <strong>${BRAND.shortName} 1-on-1 round</strong> is open and you're in — we'll email you your match once the round runs.</p><p>Can't make a 30-min conversation this month? Head to the portal and opt out before matches go out. No need to do anything if you're in.</p><p><a href="${optOutLink}" style="display:inline-block;padding:10px 20px;background:${BRAND.colors.brandNavy};color:white;border-radius:8px;text-decoration:none;font-weight:600;">Sit this month out →</a></p>`,
                 category: 'marketing',
             });
             sent++;

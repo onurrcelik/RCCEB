@@ -151,6 +151,15 @@ export function setSessionCookie(response: NextResponse, kind: SessionKind, toke
     });
 }
 
+// Re-issues the cookie the request came in with, so its 30 days restart from today. Without
+// this the browser drops the cookie 30 days after sign-in even though the session row
+// above keeps rolling forward, and an active member would be asked to sign in again.
+export function refreshSessionCookie(request: NextRequest, response: NextResponse, kind: SessionKind) {
+    const token = request.cookies.get(SESSION_COOKIE[kind])?.value;
+    if (token) setSessionCookie(response, kind, token);
+    return response;
+}
+
 export function clearSessionCookie(response: NextResponse, kind: SessionKind) {
     response.cookies.set(SESSION_COOKIE[kind], '', { httpOnly: true, path: '/', maxAge: 0 });
 }

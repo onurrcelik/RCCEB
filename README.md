@@ -10,8 +10,8 @@ or Community Brain.
 ## What's in it
 
 **Member portal** (`/members`): Directory (filter by pathway, search by class year),
-Companies (which companies members can open a door to), Job Board, Marketplace, Perks,
-weekly 1-on-1 Match, Links, Events, Refer a Friend and Profile. Members sign in with a
+Companies (which companies members can open a door to), Job Board, Asks & Offers, Perks,
+monthly 1-on-1 Match, Links, Events, Refer a Friend and Profile. Members sign in with a
 magic link or a one-time code. Membership is free, so onboarding is two steps: profile,
 then referrals. Name, phone, LinkedIn, class year and pathway are copied from the
 application on rcceb.org/join.
@@ -64,8 +64,8 @@ you straight through, so you can log in without Resend. Sign in at `/admin/login
 
    The application appears under **Admin → Applications**, and `NOTIFICATION_EMAIL`
    receives an email about it.
-2. Optional: click **Meet** to email them your booking link. You set the link in
-   Settings.
+2. Robert College checks the applicant really graduated. Track it with the Application
+   status: **Sent to RC**, then **RC Verified**.
 3. Set Admission to **Accepted**, then click **Portal**. This creates the member, copying
    their name, phone, LinkedIn, class year and pathway from the application, and emails
    them a 30-day onboarding link.
@@ -73,12 +73,12 @@ you straight through, so you can log in without Resend. Sign in at `/admin/login
 
 You can also add members directly on the Members page and re-send their invite from there.
 
-## Scheduled job
+## 1-on-1 matching
 
-`GET /api/cron/weekly-match-round` with `Authorization: Bearer $CRON_SECRET` opens the
-week's 1-on-1 round and emails the pool. Schedule it for Sundays. Add `?dry_run=1` to
-check the setup without sending anything. Running the match itself stays manual, under
-Admin → Matches.
+Rounds are monthly and run by hand from **Admin → Matches**. Nothing is scheduled:
+**Create Round** puts every onboarded member in, **Notify All Members** emails them with a
+way to sit the month out, **Run Match** makes the pairs without emailing anyone, and
+**Send Intro Emails** tells each pair who they got. Only one round can be open at a time.
 
 ## Layout
 
@@ -87,7 +87,7 @@ Admin → Matches.
 | `proxy.ts` | Auth gate for `/admin`, `/api/admin`, `/members` and `/api/members`. Most route handlers rely on it. |
 | `app/members/` | Member portal pages. |
 | `app/admin/` | Admin dashboard pages. |
-| `app/api/` | Route handlers. `applications`, `cron`, `jobs`, `match-confirm` and `unsubscribe` are public and do their own checks. |
+| `app/api/` | Route handlers. `applications`, `match-confirm` and `unsubscribe` are public and do their own checks. |
 | `app/lib/` | Server helpers: DB, auth, email, categories, brand. |
 | `db/schema.sql` | The whole database schema (`npm run db:setup` applies it). |
 | `brand/` | The full-resolution seal (not served). |

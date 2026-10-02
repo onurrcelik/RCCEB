@@ -7,7 +7,7 @@ import { EventImageGrid } from '@/app/components/events/EventImageGrid';
 import { EventLightbox } from '@/app/components/events/EventLightbox';
 import { EventRecord, formatEventDate } from '@/app/lib/events';
 import {
-    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, TagIcon, GiftIcon, BuildingOffice2Icon, Bars3Icon, PresentationChartBarIcon
+    UsersIcon, LinkIcon, CalendarIcon, MapPinIcon, ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon, ArrowTopRightOnSquareIcon, SparklesIcon, CheckCircleIcon, UserPlusIcon, EnvelopeIcon, DocumentTextIcon, GlobeAltIcon, PhotoIcon, ArrowsRightLeftIcon, PhoneIcon, BriefcaseIcon, HandRaisedIcon, GiftIcon, BuildingOffice2Icon, Bars3Icon, PresentationChartBarIcon
 } from '@heroicons/react/24/outline';
 import { LinkedinIcon, GithubIcon, InstagramIcon, YoutubeIcon } from '@/app/components/ui/BrandIcons';
 import { categoryLabel, classYearLabel, MEMBER_CATEGORIES } from '@/app/lib/categories';
@@ -122,7 +122,7 @@ const NAV_ITEMS = [
     { id: 'directory', label: 'Directory', icon: UsersIcon },
     { id: 'companies', label: 'Companies', icon: BuildingOffice2Icon },
     { id: 'job-board', label: 'Job Board', icon: BriefcaseIcon },
-    { id: 'marketplace', label: 'Marketplace', icon: TagIcon },
+    { id: 'marketplace', label: 'Asks & Offers', icon: HandRaisedIcon },
     { id: 'pitch-decks', label: 'Pitch Decks', icon: PresentationChartBarIcon },
     { id: 'perks', label: 'Perks', icon: GiftIcon },
     { id: 'match', label: '1-on-1 Match', icon: ArrowsRightLeftIcon },
@@ -159,7 +159,7 @@ function LinkTypeIcon({ type }: { type: string }) {
     }
 }
 
-// Shown in place of the weekly round for members outside the 1-on-1 pool — unfinished
+// Shown in place of the monthly round for members outside the 1-on-1 pool — unfinished
 // onboarding, or marked as a past member. Their match history stays below, only new
 // rounds are gone.
 function IneligibleMatchCard() {
@@ -167,7 +167,7 @@ function IneligibleMatchCard() {
         <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-zinc-700 rounded-2xl p-10 text-center">
             <ArrowsRightLeftIcon className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
             <h3 className="text-white font-semibold mb-2">You&apos;re not in this round</h3>
-            <p className="text-zinc-400 text-sm">The weekly 1-on-1s run for active, onboarded members. Your past matches are still below.</p>
+            <p className="text-zinc-400 text-sm">The monthly 1-on-1s run for active, onboarded members. Your past matches are still below.</p>
         </div>
     );
 }
@@ -895,8 +895,8 @@ function DashboardContent() {
                         )}
                         {activeSection === 'marketplace' && (
                             <>
-                                <h1 className="text-xl font-bold text-white mb-1">Marketplace</h1>
-                                <p className="text-zinc-400 text-sm">Post what you can help with — members contact you directly.</p>
+                                <h1 className="text-xl font-bold text-white mb-1">Asks &amp; Offers</h1>
+                                <p className="text-zinc-400 text-sm">Ask for what you need, offer what you can help with — members contact each other directly.</p>
                             </>
                         )}
                         {activeSection === 'pitch-decks' && (
@@ -1133,15 +1133,15 @@ function DashboardContent() {
                             ) : !matchData?.currentRound ? (
                                 <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-zinc-700 rounded-2xl p-10 text-center">
                                     <ArrowsRightLeftIcon className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
-                                    <h3 className="text-white font-semibold mb-2">No round this week yet</h3>
+                                    <h3 className="text-white font-semibold mb-2">No round this month yet</h3>
                                     <p className="text-zinc-400 text-sm">We&apos;ll send you an email when the next round opens.</p>
                                 </div>
                             ) : (
                                 <div className="max-w-full space-y-4 overflow-hidden lg:overflow-visible">
-                                    {/* Pending confirmation from last week */}
+                                    {/* Pending confirmation from last month */}
                                     {matchData.pendingConfirmation && !matchConfirmationDone && (
                                         <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-amber-500/30 rounded-2xl p-6">
-                                            <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-3">Last Week&apos;s Match</div>
+                                            <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-3">Last Month&apos;s Match</div>
                                             <div className="flex items-center gap-3 mb-4">
                                                 <Avatar url={matchData.pendingConfirmation.member.avatar_url} name={matchData.pendingConfirmation.member.name} className="w-10 h-10 shrink-0" textClass="text-sm" />
                                                 <div>
@@ -1178,9 +1178,9 @@ function DashboardContent() {
                                     {/* Current round card */}
                                     <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-zinc-700 rounded-2xl p-6">
                                         <div className="flex items-center justify-between mb-4">
-                                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">This Week</div>
+                                            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">This Month</div>
                                             <span className="text-[10px] font-bold text-zinc-500">
-                                                Week of {new Date(matchData.currentRound.week_of).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                {new Date(matchData.currentRound.week_of).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                                             </span>
                                         </div>
 
@@ -1188,7 +1188,7 @@ function DashboardContent() {
                                         {matchData.currentRound.status === 'open' && !matchData.myResponse && (
                                             <div>
                                                 <p className="max-w-full text-zinc-300 text-sm leading-relaxed mb-5">
-                                                    Ready for a 30-minute 1-on-1 with another RCCEB member this week?
+                                                    Ready for a 30-minute 1-on-1 with another RCCEB member this month?
                                                 </p>
                                                 <div className="flex gap-3">
                                                     <button
@@ -1203,7 +1203,7 @@ function DashboardContent() {
                                                         disabled={submittingMatch}
                                                         className="flex-1 py-3 text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 rounded-xl transition-all"
                                                     >
-                                                        Not this week
+                                                        Not this month
                                                     </button>
                                                 </div>
                                             </div>
@@ -1215,7 +1215,7 @@ function DashboardContent() {
                                                 <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                                                     <CheckCircleIcon className="w-5 h-5 text-emerald-400 shrink-0" />
                                                     <div>
-                                                        <div className="text-emerald-300 text-sm font-medium">You&apos;re in for this week</div>
+                                                        <div className="text-emerald-300 text-sm font-medium">You&apos;re in for this month</div>
                                                         <div className="text-emerald-500/70 text-xs mt-0.5">Everyone joins by default — we&apos;ll email you your match when the round runs.</div>
                                                     </div>
                                                 </div>
@@ -1224,7 +1224,7 @@ function DashboardContent() {
                                                     disabled={submittingMatch}
                                                     className="mt-3 w-full py-2.5 text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 rounded-xl transition-all flex items-center justify-center"
                                                 >
-                                                    {submittingMatch ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Can't make it this week"}
+                                                    {submittingMatch ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Can't make it this month"}
                                                 </button>
                                             </div>
                                         )}
@@ -1235,7 +1235,7 @@ function DashboardContent() {
                                                 <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-800 border border-zinc-700">
                                                     <XMarkIcon className="w-5 h-5 text-zinc-400 shrink-0" />
                                                     <div>
-                                                        <div className="text-zinc-300 text-sm font-medium">Sitting out this week</div>
+                                                        <div className="text-zinc-300 text-sm font-medium">Sitting out this month</div>
                                                         <div className="text-zinc-500 text-xs mt-0.5">No worries — you can always join next round.</div>
                                                     </div>
                                                 </div>
@@ -1264,8 +1264,8 @@ function DashboardContent() {
                                                             </div>
                                                             <div className={`text-xs mt-0.5 break-words lg:break-normal ${matchData.isOpener ? 'text-gold-300/70' : 'text-amber-400/70'}`}>
                                                                 {matchData.isOpener
-                                                                    ? `It's your responsibility to reach out this week. (Who goes first is randomly chosen.)`
-                                                                    : `It's ${matchData.myCurrentMatch.name.split(' ')[0]}'s responsibility to reach out this week. (Who goes first is randomly chosen.)`}
+                                                                    ? `It's your responsibility to reach out this month. (Who goes first is randomly chosen.)`
+                                                                    : `It's ${matchData.myCurrentMatch.name.split(' ')[0]}'s responsibility to reach out this month. (Who goes first is randomly chosen.)`}
                                                             </div>
                                                         </div>
                                                     </div>

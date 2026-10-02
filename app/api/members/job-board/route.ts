@@ -8,7 +8,7 @@ import { query } from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-const POST_SELECT = 'id, author_id, type, title, description, location, tags, status, closed_at, created_at, updated_at, share_token';
+const POST_SELECT = 'id, author_id, type, title, description, location, tags, status, closed_at, created_at, updated_at';
 const AUTHOR_SELECT = 'id, name, avatar_url';
 
 function jsonNoStore(body: unknown, init?: ResponseInit) {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const visibleSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     let posts;
     try {
-        ({ rows: posts } = await query<{ id: string; author_id: string; type: string; title: string; description: string; location: string | null; tags: unknown; status: string; closed_at: string | null; created_at: string; updated_at: string; share_token: string | null }>(
+        ({ rows: posts } = await query<{ id: string; author_id: string; type: string; title: string; description: string; location: string | null; tags: unknown; status: string; closed_at: string | null; created_at: string; updated_at: string }>(
             `SELECT ${POST_SELECT} FROM job_board_posts WHERE status = 'open' OR closed_at >= $1`,
             [visibleSince],
         ));
@@ -41,13 +41,12 @@ export async function GET(request: NextRequest) {
     const authorIds = Array.from(new Set(posts.map(post => post.author_id)));
     const postIds = posts.map(post => post.id);
 
-    let authors, companies, applications, referrals;
+    let authors, companies, applications;
     try {
         [
             { rows: authors },
             { rows: companies },
             { rows: applications },
-            { rows: referrals },
         ] = await Promise.all([
             query<{ id: string; name: string | null; avatar_url: string | null }>(
                 `SELECT ${AUTHOR_SELECT} FROM members WHERE id = ANY($1)`, [authorIds],
@@ -63,25 +62,9 @@ export async function GET(request: NextRequest) {
             query<{ post_id: string; applicant_member_id: string }>(
                 'SELECT post_id, applicant_member_id FROM job_board_applications WHERE post_id = ANY($1)', [postIds],
             ),
-            query<{ post_id: string; referrer_member_id: string; note: string | null }>(
-                `SELECT post_id, referrer_member_id, note FROM job_board_referrals
-                 WHERE referred_member_id = $1 AND status = $2 AND post_id = ANY($3)`,
-                [member.id, 'pending', postIds],
-            ),
         ]);
     } catch {
         return jsonNoStore({ error: 'Failed to load Job Board details' }, { status: 500 });
-    }
-
-    // Resolve the names of members who referred the viewer, for the "X referred
-    // you" banner. Referrers may not be post authors, so fetch them separately.
-    const referrerIds = Array.from(new Set(referrals.map(referral => referral.referrer_member_id)));
-    const referrerNameById = new Map<string, string>();
-    if (referrerIds.length > 0) {
-        const { rows: referrers } = await query<{ id: string; name: string | null }>(
-            'SELECT id, name FROM members WHERE id = ANY($1)', [referrerIds],
-        );
-        for (const referrer of referrers) referrerNameById.set(referrer.id, referrer.name || 'An RCCEB member');
     }
 
     const authorById = new Map(authors.map(author => [author.id, author]));
@@ -94,13 +77,10 @@ export async function GET(request: NextRequest) {
         if (application.applicant_member_id === member.id) viewerAppliedPostIds.add(application.post_id);
     }
 
-    const referralByPostId = new Map(referrals.map(referral => [referral.post_id, referral]));
-
     const result: JobBoardPost[] = posts
         .map(post => {
         const author = authorById.get(post.author_id);
         const isOwn = post.author_id === member.id;
-        const referral = referralByPostId.get(post.id);
 
         return {
             id: post.id,
@@ -122,12 +102,6 @@ export async function GET(request: NextRequest) {
             is_own: isOwn,
             viewer_applied: viewerAppliedPostIds.has(post.id),
             application_count: isOwn ? applicationCountByPostId.get(post.id) ?? 0 : 0,
-            // Public share token — any member can build a "refer an outside friend"
-            // link from it; only the owner sees applicant details.
-            share_token: post.share_token ?? null,
-            incoming_referral: referral && !isOwn
-                ? { referrer_name: referrerNameById.get(referral.referrer_member_id) || 'An RCCEB member', note: referral.note ?? null }
-                : null,
         };
     }).sort((a, b) => {
         if (a.type !== b.type) return a.type === 'job' ? -1 : 1;

@@ -173,7 +173,7 @@ function buttonHtml(label: string, url: string): string {
  */
 export async function notifyPosterNewApplication(
     author: { email: string; name: string | null },
-    application: { title: string; applicantName: string; referrerName: string | null },
+    application: { title: string; applicantName: string },
     boardUrl: string,
 ): Promise<void> {
     const apiKey = process.env.RESEND_API_KEY;
@@ -184,60 +184,18 @@ export async function notifyPosterNewApplication(
 
     const applicant = escapeHtml(application.applicantName.trim() || 'Someone');
     const title = escapeHtml(truncate(application.title, 100));
-    const referredLine = application.referrerName?.trim()
-        ? `<p style="font-family:Arial,sans-serif;font-size:13px;color:#6b7280;margin:0 0 16px 0;">Referred by ${escapeHtml(application.referrerName.trim())}</p>`
-        : '';
 
     const html = `<div style="max-width:560px;font-family:Arial,sans-serif;color:#18181b;">
   <p style="font-size:13px;color:#6b7280;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.08em;">New application</p>
-  <h1 style="font-size:20px;font-weight:700;margin:0 0 4px 0;">${applicant} applied to ${title}</h1>
-  ${referredLine}
+  <h1 style="font-size:20px;font-weight:700;margin:0 0 16px 0;">${applicant} applied to ${title}</h1>
   <p style="font-size:15px;line-height:1.7;margin:0 0 24px 0;">Open your Job Board to read their note, view their profile, and reach out.</p>
   ${buttonHtml('View applicants', boardUrl)}
 </div>`;
     const text = [
         `${application.applicantName.trim() || 'Someone'} applied to "${application.title}" on the ${BRAND.shortName} Job Board.`,
-        application.referrerName?.trim() ? `Referred by ${application.referrerName.trim()}.` : '',
         '',
         `View their application: ${boardUrl}`,
     ].filter(Boolean).join('\n');
 
     await sendEmail(apiKey, author.email, `New application: ${truncate(application.title, 80)}`, html, text);
-}
-
-/**
- * Emails a member when another member refers them to a job. Best-effort.
- */
-export async function notifyMemberReferred(
-    referred: { email: string; name: string | null },
-    referral: { title: string; referrerName: string; note: string | null },
-    boardUrl: string,
-): Promise<void> {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-        console.warn('notifyMemberReferred skipped: RESEND_API_KEY not configured');
-        return;
-    }
-
-    const referrer = escapeHtml(referral.referrerName.trim() || `A ${BRAND.shortName} member`);
-    const title = escapeHtml(truncate(referral.title, 100));
-    const noteBlock = referral.note?.trim()
-        ? `<blockquote style="border-left:3px solid ${BRAND.colors.brandNavy};margin:0 0 20px 0;padding:4px 0 4px 14px;font-size:15px;line-height:1.7;color:#374151;">${escapeHtml(referral.note.trim())}</blockquote>`
-        : '';
-
-    const html = `<div style="max-width:560px;font-family:Arial,sans-serif;color:#18181b;">
-  <p style="font-size:13px;color:#6b7280;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.08em;">You were referred</p>
-  <h1 style="font-size:20px;font-weight:700;margin:0 0 12px 0;">${referrer} thinks you'd be a fit for ${title}</h1>
-  ${noteBlock}
-  <p style="font-size:15px;line-height:1.7;margin:0 0 24px 0;">Open the Job Board to read the full post and apply in one tap.</p>
-  ${buttonHtml('See the job', boardUrl)}
-</div>`;
-    const text = [
-        `${referral.referrerName.trim() || `A ${BRAND.shortName} member`} referred you for "${referral.title}" on the ${BRAND.shortName} Job Board.`,
-        referral.note?.trim() ? `\n"${referral.note.trim()}"` : '',
-        '',
-        `See the job and apply: ${boardUrl}`,
-    ].filter(Boolean).join('\n');
-
-    await sendEmail(apiKey, referred.email, `${referral.referrerName.trim() || 'A member'} referred you for a job`, html, text);
 }

@@ -41,35 +41,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (post.author_id === member.id) return NextResponse.json({ error: 'You cannot apply to your own post' }, { status: 400 });
     if (post.status !== 'open') return NextResponse.json({ error: 'This post is closed' }, { status: 409 });
 
-    // If the member was referred, attribute the application to the referrer and
-    // mark the referral as converted.
-    const { rows: referralRows } = await query<{ id: string; referrer_member_id: string }>(
-        `SELECT id, referrer_member_id FROM job_board_referrals
-         WHERE post_id = $1 AND referred_member_id = $2 AND status = 'pending'`,
-        [id, member.id],
-    );
-    const referral = referralRows[0] ?? null;
-
-    let referrerName: string | null = null;
-    if (referral) {
-        const { rows: referrerRows } = await query<{ name: string | null }>('SELECT name FROM members WHERE id = $1', [referral.referrer_member_id]);
-        referrerName = referrerRows[0]?.name ?? null;
-    }
-
     try {
         await query(
-            `INSERT INTO job_board_applications (post_id, applicant_member_id, pitch, link, referred_by_member_id, referrer_name)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [id, member.id, value.pitch, value.link, referral?.referrer_member_id ?? null, referrerName],
+            `INSERT INTO job_board_applications (post_id, applicant_member_id, pitch, link)
+             VALUES ($1, $2, $3, $4)`,
+            [id, member.id, value.pitch, value.link],
         );
     } catch (error: unknown) {
         // Unique index violation → the member already applied.
         if ((error as { code?: string } | undefined)?.code === '23505') return NextResponse.json({ error: 'You have already applied to this post' }, { status: 409 });
         return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 });
-    }
-
-    if (referral) {
-        await query("UPDATE job_board_referrals SET status = 'applied' WHERE id = $1", [referral.id]);
     }
 
     try {
@@ -80,7 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         if (author?.email) {
             await notifyPosterNewApplication(
                 { email: author.email, name: author.name },
-                { title: post.title, applicantName: member.name || 'An RCCEB member', referrerName },
+                { title: post.title, applicantName: member.name || 'An RCCEB member' },
                 `${getBaseUrl(request)}/members/dashboard?section=job-board`,
             );
         }
@@ -102,12 +83,6 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     } catch {
         return NextResponse.json({ error: 'Failed to withdraw application' }, { status: 500 });
     }
-
-    // Reopen any referral so the "referred you" prompt returns if they reconsider.
-    await query(
-        "UPDATE job_board_referrals SET status = 'pending' WHERE post_id = $1 AND referred_member_id = $2 AND status = 'applied'",
-        [id, member.id],
-    );
 
     return NextResponse.json({ ok: true });
 }

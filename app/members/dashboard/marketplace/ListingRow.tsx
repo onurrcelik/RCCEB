@@ -34,12 +34,12 @@ export function ListingRow({ listing, expanded, onToggle, onEdit, onChanged }: P
     const [error, setError] = useState('');
 
     async function deleteListing() {
-        if (!window.confirm('Permanently delete this listing?')) return;
+        if (!window.confirm('Permanently delete this post?')) return;
         setWorking(true);
         const res = await fetch(`/api/members/marketplace/${listing.id}`, { method: 'DELETE' });
         setWorking(false);
         if (res.ok) onChanged();
-        else setError('Could not delete listing');
+        else setError('Could not delete post');
     }
 
     return (
@@ -54,6 +54,9 @@ export function ListingRow({ listing, expanded, onToggle, onEdit, onChanged }: P
                 )}
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${listing.type === 'ask' ? 'bg-sky-400/15 text-sky-300' : 'bg-emerald-400/15 text-emerald-300'}`}>
+                            {listing.type === 'ask' ? 'Ask' : 'Offer'}
+                        </span>
                         <h3 className="text-sm font-semibold text-gold-300 sm:text-[15px]">{listing.title}</h3>
                         {listing.is_own && (
                             <span className="rounded bg-gold-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-300">Yours</span>

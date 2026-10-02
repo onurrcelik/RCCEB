@@ -15,19 +15,19 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const body = await request.json().catch(() => ({}));
     const { value, error: validationError } = normalizeMarketplaceListingInput(body);
     if (!value || validationError) {
-        return NextResponse.json({ error: validationError || 'Invalid listing' }, { status: 400 });
+        return NextResponse.json({ error: validationError || 'Invalid post' }, { status: 400 });
     }
 
     try {
         const { rows } = await query(
-            `UPDATE marketplace_listings SET title = $3, description = $4, contact_info = $5, tags = $6, updated_at = now()
+            `UPDATE marketplace_listings SET type = $3, title = $4, description = $5, contact_info = $6, tags = $7, updated_at = now()
              WHERE id = $1 AND author_id = $2 RETURNING id`,
-            [id, member.id, value.title, value.description, value.contact_info, value.tags],
+            [id, member.id, value.type, value.title, value.description, value.contact_info, value.tags],
         );
-        if (!rows[0]) return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+        if (!rows[0]) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
         return NextResponse.json({ ok: true });
     } catch {
-        return NextResponse.json({ error: 'Failed to update listing' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to update post' }, { status: 500 });
     }
 }
 
@@ -40,6 +40,6 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
         await query('DELETE FROM marketplace_listings WHERE id = $1 AND author_id = $2', [id, member.id]);
         return NextResponse.json({ ok: true });
     } catch {
-        return NextResponse.json({ error: 'Failed to delete listing' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 });
     }
 }

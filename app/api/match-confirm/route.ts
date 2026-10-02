@@ -5,7 +5,7 @@ import { verifyMatchConfirm, type MetAnswer } from '@/app/lib/match-confirm';
 
 export const dynamic = 'force-dynamic';
 
-// Landing page for the "did you meet?" buttons in the weekly 1-on-1 emails. It sits
+// Landing page for the "did you meet?" buttons in the monthly 1-on-1 emails. It sits
 // outside /members and /api/members on purpose: proxy.ts gates those behind a
 // session, and requiring a login is the exact friction that kept people from answering.
 // The signed token in the link is what stands in for auth.
@@ -17,7 +17,7 @@ const REASONS: { value: string; label: string }[] = [
     { value: 'no_contact', label: 'We never connected' },
     { value: 'no_schedule', label: 'We messaged, never scheduled' },
     { value: 'fell_through', label: 'We scheduled, it fell through' },
-    { value: 'no_time', label: 'No time this week' },
+    { value: 'no_time', label: 'No time this month' },
 ];
 
 function page(title: string, body: string, status = 200) {
@@ -196,12 +196,12 @@ export async function GET(request: NextRequest) {
         const flip = flipLink({ ...params, answer: answered ? 'yes' : 'no' }, answered ? "Actually, we didn't meet" : 'Actually, we did meet');
         if (!hasFollowUp(response)) {
             return page('Already answered', `<h1>You've already answered</h1>
-<p>You told us you ${answered ? 'met' : "didn't meet"} <span class="name">${name}</span> that week. ${answered ? 'How would you rate it?' : "Why didn't you meet?"}</p>
+<p>You told us you ${answered ? 'met' : "didn't meet"} <span class="name">${name}</span> that month. ${answered ? 'How would you rate it?' : "Why didn't you meet?"}</p>
 ${followUpForm(params, answered)}
 ${flip}`);
         }
         return page('Already answered', `<h1>You've already answered</h1>
-<p>You told us you ${answered ? 'met' : "didn't meet"} <span class="name">${name}</span> that week. Thanks — that's all we needed.</p>
+<p>You told us you ${answered ? 'met' : "didn't meet"} <span class="name">${name}</span> that month. Thanks — that's all we needed.</p>
 ${flip}`);
     }
 
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
 
     if (feedbackMet !== null) {
         return page('Thanks', `<h1>Thanks — that helps</h1>
-<p>${feedbackMet ? 'Glad you two got to talk.' : "Noted. You're in this week's round either way."}</p>`);
+<p>${feedbackMet ? 'Glad you two got to talk.' : "Noted. You're in this month's round either way."}</p>`);
     }
 
     const met = params.answer === 'yes';

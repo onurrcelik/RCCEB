@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminEmail } from '@/app/lib/admin-auth';
-import { sessionEmailFromRequest } from '@/app/lib/auth';
+import { refreshSessionCookie, sessionEmailFromRequest } from '@/app/lib/auth';
 import { query } from '@/app/lib/db';
 
 function denyAdmin(request: NextRequest, pathname: string) {
@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
             console.error('proxy.ts admin session lookup failed:', e);
         }
         if (!isAdminEmail(email)) return denyAdmin(request, pathname);
-        return NextResponse.next();
+        return refreshSessionCookie(request, NextResponse.next(), 'admin');
     }
 
     // Member auth bypass routes — exact matches only.
@@ -94,7 +94,9 @@ export async function proxy(request: NextRequest) {
             return denyMember(request, pathname);
         }
 
-        return NextResponse.next();
+        // Each visit restarts the cookie's 30 days, so an active member never has to
+        // ask for another sign-in link.
+        return refreshSessionCookie(request, NextResponse.next(), 'member');
     }
 
     return NextResponse.next();

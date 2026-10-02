@@ -15,15 +15,15 @@ interface Applicant {
 }
 
 // One pipeline stage per application: an admission decision, once made, wins over the
-// meeting status that led up to it.
+// verification status that led up to it.
 function stageOf(a: Applicant): string {
     return a.admission_status || a.status;
 }
 
 const STATUS_COLORS: Record<string, string> = {
     submitted: 'bg-brand-blue-500',
-    'meeting invited': 'bg-violet-500',
-    'meeting done': 'bg-cyan-500',
+    'sent to rc': 'bg-violet-500',
+    'rc verified': 'bg-cyan-500',
     accepted: 'bg-green-500',
     deferred: 'bg-amber-400',
     declined: 'bg-red-400',
@@ -31,8 +31,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
     submitted: 'Submitted',
-    'meeting invited': 'Meeting Invited',
-    'meeting done': 'Meeting Done',
+    'sent to rc': 'Sent to RC',
+    'rc verified': 'RC Verified',
     accepted: 'Accepted',
     deferred: 'Deferred',
     declined: 'Declined',
