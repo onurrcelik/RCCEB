@@ -55,7 +55,8 @@ Write in English, first person, warm and natural, not corporate. No em dashes, n
 7. Favorite read / video / person / source
    Only the name, at most 8 words, e.g. "Paul Graham's essays". Do not say why. No second sentence.
 
-Bonus, after the 7 sections: my WhatsApp intro for the RCCEB group, in Turkish, 80 to 120 words, warm and natural, in exactly this format:
+8. WhatsApp intro
+   My intro for the RCCEB WhatsApp group, in Turkish, 80 to 120 words, warm and natural, in exactly this format:
 
 [Name] - [Company] — [Role], RC'[year]
 Ne yapıyorum: [1-3 sentences]

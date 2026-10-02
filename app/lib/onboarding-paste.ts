@@ -32,6 +32,14 @@ const HEADINGS: [SectionKey, RegExp][] = [
     ['bonus', /^(bonus|whatsapp)\b/],
 ];
 
+// ChatGPT sometimes drops the WhatsApp intro's heading and writes it straight after the
+// favorite source. Its own format gives it away: a "Name - Company — Role, RC'21" line,
+// or the Turkish labels under it.
+function startsWhatsappIntro(line: string) {
+    const text = line.replace(/\*\*|__/g, '').trim();
+    return /\bRC\s*['’`]?\s*\d{2}(\d{2})?\s*$/i.test(text) || /^(ne yap[ıi]yorum|katk[ıi]m|lokasyon)\b/i.test(text);
+}
+
 function cleanLine(line: string) {
     return line
         .replace(/^\s*(#{1,6}\s*)?/, '')
@@ -109,6 +117,11 @@ export function parseChatGptReply(reply: string): { fields: ParsedOnboarding; fo
             // The bonus heading's own label ("Bonus: WhatsApp intro") isn't part of the intro.
             if (inline && heading !== 'bonus') sections.get(heading)!.push(inline);
             continue;
+        }
+        // Only checked inside the last section, so a bio that mentions "RC'21" stays put.
+        if (current === 'favorite_resource' && startsWhatsappIntro(line)) {
+            current = 'bonus';
+            if (!sections.has('bonus')) sections.set('bonus', []);
         }
         if (current) sections.get(current)!.push(line);
     }
