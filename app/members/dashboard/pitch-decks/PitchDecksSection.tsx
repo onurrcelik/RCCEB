@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EyeIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MemberLink } from '../MemberLink';
 import {
     PITCH_STAGES,
     companyInitials,
@@ -207,7 +208,7 @@ function ReviewPanel({
                 </div>
                 <p className="text-sm font-medium text-zinc-200">{deck.company_name}</p>
                 <p className="mt-1 text-xs text-zinc-500">
-                    {`Submitted ${formatSubmitted(deck.created_at)} by ${deck.author.name} · ${formatSize(deck.file_size)} · ${deck.view_count} ${deck.view_count === 1 ? 'view' : 'views'}`}
+                    Submitted {formatSubmitted(deck.created_at)} by <MemberLink memberId={deck.author.id} className="text-zinc-300 underline-offset-2 hover:underline">{deck.author.name}</MemberLink>{` · ${formatSize(deck.file_size)} · ${deck.view_count} ${deck.view_count === 1 ? 'view' : 'views'}`}
                 </p>
                 <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">{deck.description}</p>
                 {error && <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-300">{error}</div>}
@@ -398,7 +399,7 @@ export function PitchDecksSection() {
                             <p className="mt-0.5 text-sm text-zinc-400">{deck.company_name}</p>
                             <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-zinc-400">{deck.description}</p>
                             <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-zinc-500">
-                                <span>Submitted {formatSubmitted(deck.created_at)} by {deck.author.name}</span>
+                                <span>Submitted {formatSubmitted(deck.created_at)} by <MemberLink memberId={deck.author.id} className="text-zinc-400 underline-offset-2 hover:underline">{deck.author.name}</MemberLink></span>
                                 <span className="inline-flex shrink-0 items-center gap-1">
                                     <EyeIcon className="h-3.5 w-3.5" />
                                     {deck.view_count}

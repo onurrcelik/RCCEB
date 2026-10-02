@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/app/lib/db';
 import { verifyAdminSession } from '@/app/lib/admin-auth';
+import { normalizeEventLink } from '@/app/lib/events';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // Same column set the POST insert accepts — PATCH must not let a caller name an
 // arbitrary column, since column names can't be bind params.
-const ALLOWED_EVENT_COLUMNS = ['title', 'description', 'date', 'location', 'type', 'attendees', 'images', 'upcoming'];
+const ALLOWED_EVENT_COLUMNS = ['title', 'description', 'date', 'location', 'type', 'attendees', 'images', 'upcoming', 'link'];
 
 function jsonNoStore(body: unknown, init?: ResponseInit) {
     return NextResponse.json(body, {
@@ -43,12 +44,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { title, description, date, location, type, attendees, images, upcoming } = body;
     if (!title || !date) return jsonNoStore({ error: 'title and date are required' }, { status: 400 });
+    const { link, error: linkError } = normalizeEventLink(body.link);
+    if (linkError) return jsonNoStore({ error: linkError }, { status: 400 });
 
     try {
         const { rows: [data] } = await query(
-            `INSERT INTO events (title, description, date, location, type, attendees, images, upcoming)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [title, description, date, location, type, attendees, JSON.stringify(normalizeImages(images)), upcoming ?? false],
+            `INSERT INTO events (title, description, date, location, type, attendees, images, upcoming, link)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [title, description, date, location, type, attendees, JSON.stringify(normalizeImages(images)), upcoming ?? false, link],
         );
         return jsonNoStore(data);
     } catch (error: unknown) {
@@ -67,7 +70,9 @@ export async function PATCH(request: NextRequest) {
     const columns = Object.keys(updates).filter(col => ALLOWED_EVENT_COLUMNS.includes(col));
     if (columns.length === 0) return jsonNoStore({ error: 'No valid fields to update' }, { status: 400 });
 
-    const values = columns.map(col => col === 'images' ? JSON.stringify(normalizeImages(updates[col])) : updates[col]);
+    const normalizedLink = normalizeEventLink(updates.link);
+    if (columns.includes('link') && normalizedLink.error) return jsonNoStore({ error: normalizedLink.error }, { status: 400 });
+    const values = columns.map(col => col === 'images' ? JSON.stringify(normalizeImages(updates[col])) : col === 'link' ? normalizedLink.link : updates[col]);
     const setClause = columns.map((col, i) => `${col} = $${i + 2}`).join(', ');
 
     try {

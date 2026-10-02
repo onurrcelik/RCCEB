@@ -212,6 +212,8 @@ CREATE TABLE IF NOT EXISTS events (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+-- The event's own page (Luma, Eventbrite…): members see a Register / Event page button.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS link TEXT;
 
 -- ── Links (curated by admins, shown on the member Links tab) ──────────────────
 CREATE TABLE IF NOT EXISTS manual_links (

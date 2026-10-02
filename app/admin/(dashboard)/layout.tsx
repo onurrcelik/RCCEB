@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { UsersIcon, ChartBarIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, CheckBadgeIcon, CalendarDaysIcon, ArrowsRightLeftIcon, ClipboardDocumentListIcon, PencilSquareIcon, CheckIcon, XMarkIcon, PlusIcon, LinkIcon, ChevronRightIcon, GiftIcon, BuildingOffice2Icon } from '@heroicons/react/24/outline';
+import { Bars3Icon, UsersIcon, ChartBarIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, CheckBadgeIcon, CalendarDaysIcon, ArrowsRightLeftIcon, ClipboardDocumentListIcon, PencilSquareIcon, CheckIcon, XMarkIcon, PlusIcon, LinkIcon, ChevronRightIcon, GiftIcon, BuildingOffice2Icon } from '@heroicons/react/24/outline';
 import { RccebLogo } from '@/app/components/ui/RccebLogo';
 
 type NavItem = { href: string; label: string; icon: typeof UsersIcon };
@@ -34,6 +34,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const [loaded, setLoaded] = useState(false);
     const [editing, setEditing] = useState(false);
     const [otherOpen, setOtherOpen] = useState(false);
+    // Phones get a top bar and a slide-in menu instead of the fixed sidebar (md and up
+    // is unchanged). The menu closes whenever you land on a new page.
+    const [menuOpen, setMenuOpen] = useState(false);
+    useEffect(() => { setMenuOpen(false); }, [pathname]);
+    useEffect(() => {
+        if (!menuOpen) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = previous; };
+    }, [menuOpen]);
 
     // Remember the Other section per browser, but always open it when the page you're
     // on lives inside it — otherwise the sidebar wouldn't show where you are.
@@ -141,11 +151,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         );
     };
 
-    return (
-        <div className="min-h-screen bg-cream flex">
-            {/* Sidebar */}
-            <aside className="w-56 shrink-0 bg-white border-r border-slate-200 flex flex-col fixed h-screen z-20">
-                <div className="px-6 py-6 border-b border-slate-100 flex items-start justify-between">
+    const sidebarContent = (inDrawer = false) => (
+        <>
+                <div className={`px-6 py-6 border-b border-slate-100 flex items-start justify-between ${inDrawer ? 'pr-16' : ''}`}>
                     <div>
                         <RccebLogo tone="light" size={30} />
                         <div className="text-[9px] font-black text-gold-600 uppercase tracking-[0.25em] mt-2">Admin</div>
@@ -200,10 +208,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         Logout
                     </button>
                 </div>
+        </>
+    );
+
+    return (
+        <div className="min-h-screen bg-cream flex">
+            {/* Sidebar (md and up) */}
+            <aside className="hidden md:flex w-56 shrink-0 bg-white border-r border-slate-200 flex-col fixed h-screen z-20">
+                {sidebarContent()}
             </aside>
 
+            {/* Phone: top bar + slide-in menu */}
+            <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between bg-white/95 backdrop-blur border-b border-slate-200 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+                <div className="flex items-center gap-2">
+                    <RccebLogo tone="light" size={26} />
+                    <span className="text-[9px] font-black text-gold-600 uppercase tracking-[0.25em]">Admin</span>
+                </div>
+                <button onClick={() => setMenuOpen(true)} aria-label="Open menu" className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100">
+                    <Bars3Icon className="w-6 h-6" />
+                </button>
+            </div>
+            {menuOpen && (
+                <div className="md:hidden fixed inset-0 z-50" onClick={() => setMenuOpen(false)}>
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                    <aside
+                        className="absolute inset-y-0 left-0 w-[78vw] max-w-xs bg-white shadow-xl flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] animate-fade-in"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="absolute right-2 top-[max(0.5rem,env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                            <XMarkIcon className="w-5 h-5" />
+                        </button>
+                        {sidebarContent(true)}
+                    </aside>
+                </div>
+            )}
+
             {/* Main content */}
-            <main className="flex-1 ml-56 min-h-screen">
+            <main className="flex-1 min-w-0 md:ml-56 min-h-screen pt-[calc(4.25rem+env(safe-area-inset-top))] md:pt-0">
                 {children}
             </main>
         </div>

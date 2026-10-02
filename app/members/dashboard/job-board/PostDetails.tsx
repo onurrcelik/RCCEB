@@ -12,6 +12,7 @@ import {
     UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import type { JobBoardApplication, JobBoardPost } from '@/app/lib/job-board';
+import { MemberLink } from '../MemberLink';
 import { ApplyForm } from './ApplyForm';
 
 type Props = {
@@ -103,7 +104,7 @@ export function PostDetails({ post, onEdit, onChanged }: Props) {
             <Description text={post.description} />
 
             <div className="mt-4 text-[11px] text-zinc-500">
-                Posted by <span className="font-medium text-zinc-300">{post.author.name}</span>
+                Posted by <MemberLink memberId={post.author.id} className="font-medium text-zinc-300 underline-offset-2 hover:underline">{post.author.name}</MemberLink>
                 {post.author.company_name ? ` at ${post.author.company_name}` : ''}
             </div>
 
@@ -193,16 +194,18 @@ function ApplicantCard({ application }: { application: JobBoardApplication }) {
     return (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
             <div className="flex items-start gap-3">
-                {applicant.avatar_url ? (
-                    <img src={applicant.avatar_url} alt={applicant.name} className="h-9 w-9 shrink-0 rounded-full object-cover" />
-                ) : (
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-700 text-[10px] font-bold text-gold-300">
-                        {getInitials(applicant.name)}
-                    </div>
-                )}
+                <MemberLink memberId={applicant.member_id} className="shrink-0 rounded-full">
+                    {applicant.avatar_url ? (
+                        <img src={applicant.avatar_url} alt={applicant.name} className="h-9 w-9 rounded-full object-cover" />
+                    ) : (
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-[10px] font-bold text-gold-300">
+                            {getInitials(applicant.name)}
+                        </span>
+                    )}
+                </MemberLink>
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-zinc-100">{applicant.name}</span>
+                        <MemberLink memberId={applicant.member_id} className="text-sm font-semibold text-zinc-100">{applicant.name}</MemberLink>
                         {applicant.company_name && <span className="text-[11px] text-zinc-500">{applicant.company_name}</span>}
                     </div>
                 </div>

@@ -17,6 +17,7 @@ import { JobBoardSection } from './job-board/JobBoardSection';
 import { MarketplaceSection } from './marketplace/MarketplaceSection';
 import { PitchDecksSection } from './pitch-decks/PitchDecksSection';
 import { PerksSection } from './perks/PerksSection';
+import { MemberLink, OpenMemberContext } from './MemberLink';
 import { DirectoryFilters, EMPTY_DIRECTORY_FILTERS, activeFilterCount, matchesDirectoryFilters, type DirectoryFilterState } from './DirectoryFilters';
 
 type CompanyLink = {
@@ -630,6 +631,19 @@ function DashboardContent() {
             });
     }, []);
 
+    // Opens anyone's member card from any section (names and photos use MemberLink). The
+    // directory list holds the full profile; it's loaded on first use if another section
+    // is open.
+    const openMember = useCallback(async (memberId: string, fallback?: Member) => {
+        let list = members;
+        if (!list.some(m => m.id === memberId)) {
+            const d = await fetch(`/api/members/directory?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null);
+            if (Array.isArray(d?.members)) { setMembers(d.members); list = d.members; }
+        }
+        const found = list.find(m => m.id === memberId) ?? (self?.id === memberId ? self : fallback ?? null);
+        if (found) setSelectedMember(found);
+    }, [members, self]);
+
     useEffect(() => {
         const url = new URL(window.location.href);
         if (url.searchParams.get('section') === activeSection) return;
@@ -808,6 +822,7 @@ function DashboardContent() {
     const referralsDone = referrals.filter(r => r.name.trim() && r.email.trim() && r.linkedin.trim()).length >= 2;
 
     return (
+        <OpenMemberContext.Provider value={openMember}>
         <div className={activeSection === 'match' ? 'min-h-screen w-full max-w-[100vw] lg:max-w-none min-w-0 overflow-x-hidden lg:overflow-x-visible bg-zinc-950 flex' : 'min-h-screen bg-zinc-950 flex'}>
             {/* Sidebar */}
             <aside className="hidden md:flex w-60 shrink-0 flex-col fixed h-screen z-20 bg-navy-925 border-r border-zinc-800">
@@ -1150,9 +1165,9 @@ function DashboardContent() {
                                         <div className="max-w-full overflow-hidden lg:overflow-visible bg-zinc-900/60 border border-amber-500/30 rounded-2xl p-6">
                                             <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-3">Last Month&apos;s Match</div>
                                             <div className="flex items-center gap-3 mb-4">
-                                                <Avatar url={matchData.pendingConfirmation.member.avatar_url} name={matchData.pendingConfirmation.member.name} className="w-10 h-10 shrink-0" textClass="text-sm" />
+                                                <MemberLink memberId={matchData.pendingConfirmation.member.id} className="shrink-0 rounded-full"><Avatar url={matchData.pendingConfirmation.member.avatar_url} name={matchData.pendingConfirmation.member.name} className="w-10 h-10 shrink-0" textClass="text-sm" /></MemberLink>
                                                 <div>
-                                                    <div className="text-white text-sm font-medium">{matchData.pendingConfirmation.member.name}</div>
+                                                    <MemberLink memberId={matchData.pendingConfirmation.member.id} className="text-white text-sm font-medium">{matchData.pendingConfirmation.member.name}</MemberLink>
                                                     <div className="text-zinc-400 text-xs">Did you meet with them?</div>
                                                 </div>
                                             </div>
@@ -1279,7 +1294,7 @@ function DashboardContent() {
                                                 )}
                                                 <div className="bg-zinc-800 rounded-xl p-5 space-y-4">
                                                     <button
-                                                        onClick={() => setSelectedMember(matchData.myCurrentMatch as unknown as Member)}
+                                                        onClick={() => openMember(matchData.myCurrentMatch!.id, matchData.myCurrentMatch as unknown as Member)}
                                                         className="flex items-center gap-4 w-full text-left group"
                                                     >
                                                         <Avatar url={matchData.myCurrentMatch.avatar_url} name={matchData.myCurrentMatch.name} className="w-14 h-14 shrink-0" textClass="text-lg" />
@@ -1347,7 +1362,7 @@ function DashboardContent() {
                                                                     <ChevronRightIcon className={`w-4 h-4 shrink-0 text-zinc-400 transition-all duration-200 ${matchHistoryExpanded ? 'rotate-90' : ''}`} />
                                                                 </div>
                                                                 <button
-                                                                    onClick={e => { e.stopPropagation(); setSelectedMember(matchData.currentMatchHistory[0].partner); }}
+                                                                    onClick={e => { e.stopPropagation(); openMember(matchData.currentMatchHistory[0].partner.id, matchData.currentMatchHistory[0].partner); }}
                                                                     className="w-full min-w-0 flex items-center gap-2 px-3 pb-2.5 hover:bg-zinc-700/50 transition-colors rounded-b-xl"
                                                                 >
                                                                     <Avatar url={matchData.currentMatchHistory[0].partner.avatar_url} name={matchData.currentMatchHistory[0].partner.name} className="w-5 h-5 shrink-0" textClass="text-[8px]" />
@@ -1362,7 +1377,7 @@ function DashboardContent() {
                                                                         {matchData.currentMatchHistory.slice(1).map(entry => (
                                                                             <button
                                                                                 key={entry.round_id}
-                                                                                onClick={() => setSelectedMember(entry.partner)}
+                                                                                onClick={() => openMember(entry.partner.id, entry.partner)}
                                                                                 className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-zinc-700/50 transition-colors text-left"
                                                                             >
                                                                                 <Avatar url={entry.partner.avatar_url} name={entry.partner.name} className="w-6 h-6 shrink-0" textClass="text-[8px]" />
@@ -1429,7 +1444,7 @@ function DashboardContent() {
                                         {matchData.matchHistory.map(entry => (
                                             <button
                                                 key={entry.round_id}
-                                                onClick={() => setSelectedMember(entry.partner)}
+                                                onClick={() => openMember(entry.partner.id, entry.partner)}
                                                 className="w-full min-w-0 flex items-center gap-2 sm:gap-3 rounded-xl px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left"
                                             >
                                                 <Avatar url={entry.partner.avatar_url} name={entry.partner.name} className="w-8 h-8 shrink-0" textClass="text-[10px]" />
@@ -1569,6 +1584,21 @@ function DashboardContent() {
                                                     </span>
                                                 )}
                                             </div>
+                                            {event.link && (
+                                                <a
+                                                    href={event.link}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                                                        event.upcoming
+                                                            ? 'bg-gold-400 text-zinc-950 hover:bg-gold-300'
+                                                            : 'border border-zinc-600 text-zinc-200 hover:border-gold-400/60 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {event.upcoming ? 'Register' : 'Event page'}
+                                                    <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1695,6 +1725,7 @@ function DashboardContent() {
                 }} />
             )}
         </div>
+        </OpenMemberContext.Provider>
     );
 }
 
@@ -1925,7 +1956,13 @@ function CompaniesSection({
                                     </div>
                                 </div>
                                 <p className="text-zinc-300 text-xs leading-relaxed line-clamp-2">
-                                    {company.members.map(member => member.role ? `${member.name}, ${member.role}` : member.name).filter(Boolean).join(' · ')}
+                                    {company.members.filter(member => member.name).map((member, i) => (
+                                        <span key={member.id}>
+                                            {i > 0 && ' · '}
+                                            <MemberLink memberId={member.id} className="hover:underline underline-offset-2">{member.name}</MemberLink>
+                                            {member.role ? `, ${member.role}` : ''}
+                                        </span>
+                                    ))}
                                 </p>
                                 {company.website && (
                                     <p className="mt-2 text-[11px] text-zinc-500 truncate">{company.website.replace(/^https?:\/\//, '')}</p>

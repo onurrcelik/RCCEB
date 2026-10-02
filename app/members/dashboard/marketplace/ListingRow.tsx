@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MemberLink } from '../MemberLink';
 import { type MarketplaceListing } from '@/app/lib/marketplace';
 
 type Props = {
@@ -45,13 +46,15 @@ export function ListingRow({ listing, expanded, onToggle, onEdit, onChanged }: P
     return (
         <article className={`overflow-hidden border-x border-b border-zinc-800 bg-zinc-900/55 transition-colors first:rounded-t-2xl first:border-t last:rounded-b-2xl hover:bg-zinc-900/85 ${expanded ? 'bg-zinc-900/85' : ''}`}>
             <button onClick={onToggle} className="flex w-full items-start gap-3 px-4 py-4 text-left sm:gap-4 sm:px-5">
-                {listing.author.avatar_url ? (
-                    <img src={listing.author.avatar_url} alt={listing.author.name} className="mt-0.5 h-11 w-11 shrink-0 rounded-full object-cover" />
-                ) : (
-                    <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-700 text-xs font-bold text-gold-300">
-                        {getInitials(listing.author.name)}
-                    </div>
-                )}
+                <MemberLink memberId={listing.author.id} className="mt-0.5 shrink-0 rounded-full">
+                    {listing.author.avatar_url ? (
+                        <img src={listing.author.avatar_url} alt={listing.author.name} className="h-11 w-11 rounded-full object-cover" />
+                    ) : (
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-700 text-xs font-bold text-gold-300">
+                            {getInitials(listing.author.name)}
+                        </span>
+                    )}
+                </MemberLink>
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${listing.type === 'ask' ? 'bg-sky-400/15 text-sky-300' : 'bg-emerald-400/15 text-emerald-300'}`}>
@@ -62,7 +65,7 @@ export function ListingRow({ listing, expanded, onToggle, onEdit, onChanged }: P
                             <span className="rounded bg-gold-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-300">Yours</span>
                         )}
                     </div>
-                    <div className="mt-1 text-xs text-zinc-300">{listing.author.name}</div>
+                    <div className="mt-1 text-xs text-zinc-300"><MemberLink memberId={listing.author.id} className="underline-offset-2 hover:underline">{listing.author.name}</MemberLink></div>
                 </div>
                 <ChevronDownIcon className={`mt-1 h-4 w-4 shrink-0 text-zinc-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
             </button>

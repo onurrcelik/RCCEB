@@ -2,6 +2,12 @@
 
 What changed and why, newest first. Open tasks live in [`../TODO.md`](../TODO.md). The first build is commits `5c91be6` (backbone) through `d902f78` (pitch decks); everything below is 1 to 2 October 2026.
 
+## 3 October 2026
+
+- **Clickable names:** any member's name or photo in the member portal opens their card (`MemberLink.tsx`, `OpenMemberContext`).
+- **Event link:** `events.link`; admin field with https normalization; Register / Event page button for members.
+- **Mobile:** admin phone top bar + drawer, card views for Applications and Members, stacked event cards; desktop untouched (all below `md`).
+
 ## 2 October 2026: going live and the membership flow
 
 - **Portal moved to rcceb.org.** It now runs at www.rcceb.org/members and /admin, behind the landing site's rewrites, with assets under `/portal-static`. `APP_URL` is `https://www.rcceb.org`. (See [deployment.md](deployment.md).)

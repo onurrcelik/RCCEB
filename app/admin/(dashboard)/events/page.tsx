@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { PlusIcon, TrashIcon, ArrowPathIcon, CalendarIcon, MapPinIcon, UsersIcon, PhotoIcon, XMarkIcon, CheckIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowPathIcon, CalendarIcon, MapPinIcon, UsersIcon, PhotoIcon, XMarkIcon, CheckIcon, PencilIcon, LinkIcon } from '@heroicons/react/24/outline';
 import { GripVerticalIcon } from '@/app/components/ui/BrandIcons';
 import { EventRecord, formatEventDate, toDateInputValue } from '@/app/lib/events';
 
 const EMPTY: Omit<EventRecord, 'id' | 'created_at'> = {
     title: '', description: '', date: '', location: '',
-    type: 'In-person', attendees: 0, images: [], upcoming: false,
+    type: 'In-person', attendees: 0, images: [], upcoming: false, link: '',
 };
 
 export default function EventsPage() {
@@ -56,6 +56,7 @@ export default function EventsPage() {
             attendees: event.attendees,
             images: event.images ?? [],
             upcoming: event.upcoming,
+            link: event.link ?? '',
         });
         setModalOpen(true);
     }
@@ -138,7 +139,7 @@ export default function EventsPage() {
 
     return (
         <div className="p-4 md:p-12 text-slate-700">
-            <header className="flex items-center justify-between mb-8">
+            <header className="flex items-center justify-between gap-3 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Events</h1>
                     <p className="text-sm text-slate-400">Past and upcoming RCCEB gatherings.</p>
@@ -151,7 +152,7 @@ export default function EventsPage() {
                         onClick={openNew}
                         className="flex items-center gap-2 px-4 py-2 bg-brand-blue-500 hover:bg-brand-blue-600 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
                     >
-                        <PlusIcon className="w-4 h-4" /> Add Event
+                        <PlusIcon className="w-4 h-4 shrink-0" /> <span className="whitespace-nowrap">Add Event</span>
                     </button>
                 </div>
             </header>
@@ -165,17 +166,17 @@ export default function EventsPage() {
             ) : (
                 <div className="space-y-3">
                     {events.map(event => (
-                        <div key={event.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex">
+                        <div key={event.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row">
                             {event.images?.length > 0 ? (
-                                <img src={event.images[0]} alt={event.title} className="w-36 shrink-0 object-cover" />
+                                <img src={event.images[0]} alt={event.title} className="w-full h-44 md:h-auto md:w-36 shrink-0 object-cover" />
                             ) : (
-                                <div className="w-36 shrink-0 bg-slate-100 flex items-center justify-center">
+                                <div className="hidden md:flex w-36 shrink-0 bg-slate-100 items-center justify-center">
                                     <PhotoIcon className="w-6 h-6 text-slate-300" />
                                 </div>
                             )}
-                            <div className="flex-1 px-6 py-5 flex items-center gap-6 min-w-0">
+                            <div className="flex-1 px-4 py-4 md:px-6 md:py-5 flex items-start md:items-center gap-3 md:gap-6 min-w-0">
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
                                         <div className="font-semibold text-slate-900 text-sm">{event.title}</div>
                                         {event.upcoming && (
                                             <span className="text-[10px] font-bold bg-brand-blue-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Upcoming</span>
@@ -190,13 +191,18 @@ export default function EventsPage() {
                                     {event.description && (
                                         <p className="text-xs text-slate-400 line-clamp-1 mb-2">{event.description}</p>
                                     )}
-                                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
                                         <span className="flex items-center gap-1"><CalendarIcon className="w-3 h-3" />{formatEventDate(event.date)}</span>
                                         {event.location && <span className="flex items-center gap-1"><MapPinIcon className="w-3 h-3" />{event.location}</span>}
                                         {event.attendees > 0 && <span className="flex items-center gap-1"><UsersIcon className="w-3 h-3" />{event.attendees} attendees</span>}
+                                        {event.link && (
+                                            <a href={event.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-brand-blue-500 hover:underline min-w-0">
+                                                <LinkIcon className="w-3 h-3 shrink-0" /><span className="truncate">{event.link.replace(/^https?:\/\//, '')}</span>
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center gap-1 md:gap-2 shrink-0">
                                     <button onClick={() => openEdit(event)} className="p-2 text-slate-400 hover:text-brand-blue-500 hover:bg-brand-blue-500/5 rounded-lg transition-all">
                                         <PencilIcon className="w-4 h-4" />
                                     </button>
@@ -319,6 +325,15 @@ export default function EventsPage() {
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Location</label>
                                 <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Istanbul" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-brand-blue-500 transition-all" />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Event link</label>
+                                <div className="relative">
+                                    <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <input type="url" inputMode="url" value={form.link ?? ''} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://lu.ma/your-event" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-brand-blue-500 transition-all" />
+                                </div>
+                                <p className="mt-1.5 text-[11px] text-slate-400">The event&apos;s own page (Luma, Eventbrite…). Members get a Register button for upcoming events, Event page for past ones.</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">

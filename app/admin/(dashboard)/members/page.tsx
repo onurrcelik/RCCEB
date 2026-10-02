@@ -282,12 +282,12 @@ export default function MembersPage() {
                         </select>
                         <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
-                    <div className="relative">
+                    <div className="relative w-full md:w-auto">
                         <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Search name, email, class year…"
-                            className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-brand-blue-500 text-sm w-64 shadow-sm transition-all placeholder:text-slate-400"
+                            className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-brand-blue-500 text-sm w-full md:w-64 shadow-sm transition-all placeholder:text-slate-400"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
@@ -321,7 +321,104 @@ export default function MembersPage() {
                 </div>
             </header>
 
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            {/* Phones: one card per member (the table below is md and up) */}
+            <div className="md:hidden space-y-3">
+                {loading && members.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400 text-sm">
+                        <ArrowPathIcon className="w-6 h-6 animate-spin mx-auto mb-3 text-slate-300" />
+                        Loading members...
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 text-sm italic">
+                        {members.length === 0 ? 'No members yet. Accept an application and send a portal invite to add the first one.' : 'No members match your filters.'}
+                    </div>
+                ) : filtered.map(member => {
+                    const refs = parseReferrals(member.website);
+                    return (
+                        <div key={member.id} className={`bg-white border border-slate-200 rounded-2xl shadow-sm p-4 ${member.is_past_member ? 'opacity-60' : ''}`}>
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="font-semibold text-slate-900 text-[15px]">{member.name || '—'}</div>
+                                    <div className="text-xs text-slate-400 mt-0.5 break-all">{member.email}</div>
+                                    {member.location && <div className="text-xs text-slate-400">{member.location}</div>}
+                                </div>
+                                {member.is_past_member
+                                    ? <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">Past</span>
+                                    : member.onboarding_complete && member.name
+                                        ? <span className="shrink-0 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg">● Visible</span>
+                                        : <span className="shrink-0 text-[11px] font-bold text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">Hidden</span>}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                                <label className="block">
+                                    <span className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">RC class</span>
+                                    <select
+                                        value={member.graduation_year ?? ''}
+                                        onChange={e => update(member.id, { graduation_year: e.target.value ? Number(e.target.value) : null })}
+                                        disabled={updatingId === member.id}
+                                        className="w-full appearance-none bg-white border border-slate-200 rounded-lg py-2 px-2.5 text-[12px] font-bold"
+                                    >
+                                        <option value="">—</option>
+                                        {GRADUATION_YEARS.map(year => <option key={year} value={year}>{year}</option>)}
+                                    </select>
+                                </label>
+                                <label className="block">
+                                    <span className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Onboarding</span>
+                                    <select
+                                        value={member.onboarding_complete ? 'complete' : 'pending'}
+                                        onChange={e => update(member.id, { onboarding_complete: e.target.value === 'complete' })}
+                                        disabled={updatingId === member.id}
+                                        className={`w-full appearance-none bg-white border rounded-lg py-2 px-2.5 text-[11px] font-bold uppercase tracking-wider ${member.onboarding_complete ? 'text-brand-blue-500 border-brand-blue-500/20' : 'text-slate-400 border-slate-200'}`}
+                                    >
+                                        <option value="complete">Complete</option>
+                                        <option value="pending">Pending</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div className="mt-2">
+                                <span className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Pathway</span>
+                                <CategoryEditor value={member.categories ?? []} disabled={updatingId === member.id} onChange={next => update(member.id, { categories: next })} />
+                            </div>
+                            {refs.length > 0 && (
+                                <div className="mt-2 text-xs text-slate-500">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Referred: </span>
+                                    {refs.map(r => r.name).join(', ')}
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-slate-100">
+                                <span className="flex-1 text-[11px] text-slate-400">Joined {new Date(member.created_at).toLocaleDateString('en-GB')}</span>
+                                {member.linkedin && (
+                                    <a href={member.linkedin.startsWith('http') ? member.linkedin : `https://${member.linkedin}`} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:text-brand-blue-500">
+                                        <LinkedinIcon className="w-4 h-4" />
+                                    </a>
+                                )}
+                                {member.whatsapp_intro && (
+                                    <button onClick={() => setIntroMember(member)} aria-label="WhatsApp intro" className="flex h-10 w-10 items-center justify-center rounded-lg text-emerald-600">
+                                        <WhatsappIcon className="w-4 h-4" />
+                                    </button>
+                                )}
+                                {!member.onboarding_complete && !member.is_past_member && (
+                                    <button onClick={() => sendInvite(member)} disabled={invitingId === member.id} aria-label="Re-send the onboarding invite" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:text-brand-blue-500 disabled:opacity-50">
+                                        {invitingId === member.id ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <EnvelopeIcon className="w-4 h-4" />}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => update(member.id, { is_past_member: !member.is_past_member })}
+                                    disabled={updatingId === member.id}
+                                    aria-label={member.is_past_member ? 'Restore portal access' : 'Mark as past member'}
+                                    className={`flex h-10 w-10 items-center justify-center rounded-lg disabled:opacity-50 ${member.is_past_member ? 'text-amber-600' : 'text-slate-400'}`}
+                                >
+                                    {member.is_past_member ? <ArrowUturnLeftIcon className="w-4 h-4" /> : <ArchiveBoxIcon className="w-4 h-4" />}
+                                </button>
+                                <button onClick={() => deleteMember(member.id)} disabled={deletingId === member.id} aria-label="Delete member" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:text-red-500 disabled:opacity-50">
+                                    {deletingId === member.id ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <TrashIcon className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
