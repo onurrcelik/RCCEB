@@ -9,6 +9,11 @@ Tasks for Claude. Add one line per task under **To do**. Claude moves a task to 
 - also in the links section of admin portal we need to add an llm that analyzes the added link and writes a little description about it. so that we can sahre it in the links section and just like companies section members can reach to a relevant link with a single search on the search bar. i can gibe you our bedrock api key and you can use gemma there
 - also make the attendance flow
 - email is dropping to junk
+- perks section'da we cant be promote them tarzı bir yazı yazalım
+- RC friend: içeriden insanlar da refer edebiliyor, bir kriter setimiz var. Birinci derece aileden biri robert mezunuysa doğrudan o insanları rcceb'ye alabiliyoruz. eğer vc ise ayrı bir flow yapmamız lazım, bir form doldurtmamız gerekecek. 
+- RC friend'in sayısı tüm memberların 10%'inden fazla olmamalı!
+- mobil app de yapalım
+
 
 ## Done
 
